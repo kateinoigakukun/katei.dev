@@ -5,11 +5,21 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="icon" href="https://avatars3.githubusercontent.com/u/11702759?s=32" />
-  <title>Yuta Saito (a.k.a kateinoigakukun)</title>
+  <title>Yuta Saito</title>
   <style>
     body {
       font-family: monospace;
-      font-size: 1rem;
+    }
+    main {
+      max-width: 800px;
+      margin: 0 auto;
+      word-break: break-word;
+    }
+    .project-name {
+      word-break: keep-all;
+    }
+    .company {
+      word-break: keep-all;
     }
   </style>
 </head>
@@ -25,35 +35,36 @@
             href="https://llvm.org/">LLVM</a>
           and etc.</li>
       </ul>
+      <iframe src="https://github.com/sponsors/kateinoigakukun/button" title="Sponsor kateinoigakukun" height="32" width="114" style="border: 0; border-radius: 6px;"></iframe>
     </section>
 
     <section>
       <h2 id="projects">Projects</h2>
       <table>
         <tr>
-          <th><a target="_blank" href="https://github.com/ruby/ruby.wasm">ruby.wasm</a></th>
+          <th class="project-name"><a target="_blank" href="https://github.com/ruby/ruby.wasm">ruby.wasm</a></th>
           <td></td>
-          <td>WebAssembly Support for Ruby Language</td>
+          <td>WebAssembly Support for Ruby</td>
         </tr>
         <tr>
-          <th><a target="_blank" href="https://github.com/swiftwasm">SwiftWasm</a></th>
+          <th class="project-name"><a target="_blank" href="https://github.com/swiftwasm">SwiftWasm</a></th>
           <td></td>
-          <td>WebAssembly Support for Swift Language</td>
+          <td>WebAssembly Support for Swift</td>
         </tr>
       </table>
     </section>
 
     <section>
-      <h2 id="work-experience">Work Experience</h2>
+      <h2 id="work-experience">Work</h2>
       <table>
         <tr>
           <th>2023.08-2023.11</th>
-          <td><a target="_blank" href="https://www.apple.com">Apple</a></td>
+          <td class="company"><a target="_blank" href="https://www.apple.com">Apple</a></td>
           <td>Compiler Engineer Intern at Swift team</td>
         </tr>
         <tr>
           <th>2022.05-2023.07</th>
-          <td><a target="_blank" href="https://www.goodnotes.com/">GoodNotes</a></td>
+          <td class="company"><a target="_blank" href="https://www.goodnotes.com/">Goodnotes</a></td>
           <td>Part-time Compiler Engineer</td>
         </tr>
       </table>
@@ -122,11 +133,8 @@
               href="https://fortee.jp/iosdc-japan-2022/proposal/fa87f700-1483-456b-9b28-ba7c119cfa69">iOSDC
               2022</a>)
         </li>
-        <li>
-          <a target="_blank" href="https://speakerdeck.com/kateinoigakukun">More talks are available on Speaker
-              Deck</a>
-        </li>
       </ul>
+      See <a target="_blank" href="https://speakerdeck.com/kateinoigakukun">Speaker Deck</a> for more talks.
     </section>
   </main>
 </body>
