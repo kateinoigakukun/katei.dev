@@ -29,9 +29,9 @@ Rubyのプログラムにできるだけ型注釈を入れずに抽象解釈に�
 
 <p>TypeProf for IDEについては<a href="https://rubykaigi.org/2021-takeout/presentations/mametter.html">今年のRubyKaigi Takeout 2021のKeynote</a>で発表があったので、雰囲気を知りたい方はこちらを見てください。</p>
 
-<p><iframe width="560" height="315" src="https://www.youtube.com/embed/uNttp63ELoE?feature=oembed" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe><cite class="hatena-citation"><a href="https://www.youtube.com/watch?v=uNttp63ELoE">www.youtube.com</a></cite></p>
+<p><iframe src="https://www.youtube.com/embed/uNttp63ELoE?feature=oembed" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe><cite class="hatena-citation"><a href="https://www.youtube.com/watch?v=uNttp63ELoE">www.youtube.com</a></cite></p>
 
-<p><iframe src="https://www.slideshare.net/slideshow/embed_code/key/9pxYYHtUcXCkvP" width="427" height="356" frameborder="0" marginwidth="0" marginheight="0" scrolling="no" style="border:1px solid #CCC; border-width:1px; margin-bottom:5px; max-width: 100%;" allowfullscreen> </iframe> <div style="margin-bottom:5px"> <strong> <a href="https://www.slideshare.net/mametter/typeprof-for-ide-enrich-development-experience-without-annotations" title="TypeProf for IDE: Enrich Development Experience without Annotations" target="_blank">TypeProf for IDE: Enrich Development Experience without Annotations</a> </strong> from <strong><a href="https://www.slideshare.net/mametter" target="_blank">mametter</a></strong> </div>  <cite class="hatena-citation"><a href="https://www.slideshare.net/mametter/typeprof-for-ide-enrich-development-experience-without-annotations">www.slideshare.net</a></cite></p>
+<p><iframe src="https://www.slideshare.net/slideshow/embed_code/key/9pxYYHtUcXCkvP" frameborder="0" marginwidth="0" marginheight="0" scrolling="no" style="border:1px solid #CCC; border-width:1px; margin-bottom:5px; max-width: 100%;" allowfullscreen> </iframe> <div style="margin-bottom:5px"> <strong> <a href="https://www.slideshare.net/mametter/typeprof-for-ide-enrich-development-experience-without-annotations" title="TypeProf for IDE: Enrich Development Experience without Annotations" target="_blank">TypeProf for IDE: Enrich Development Experience without Annotations</a> </strong> from <strong><a href="https://www.slideshare.net/mametter" target="_blank">mametter</a></strong> </div>  <cite class="hatena-citation"><a href="https://www.slideshare.net/mametter/typeprof-for-ide-enrich-development-experience-without-annotations">www.slideshare.net</a></cite></p>
 
 <h3>実装</h3>
 
@@ -65,7 +65,7 @@ Rubyのプログラムにできるだけ型注釈を入れずに抽象解釈に�
 <p>LSPでは<code>didChange</code>は通知であり、すぐに結果を返却しなくても良く、更にコード補完リクエストもリクエストとレスポンスの順序を気にしないメソッドなので、高速化のために解析スレッドを分けることにしました。
 また、新しい <code>didChange</code> 通知が来た時点で前の状態での解析結果は無効になるため、解析を途中で打ち切る機構を追加しました。</p>
 
-<p><span itemscope itemtype="http://schema.org/Photograph"><img src="https://cdn-ak.f.st-hatena.com/images/fotolife/k/kateinoigaku/20210912/20210912110945.png" alt="f:id:kateinoigaku:20210912110945p:plain" width="992" height="922" loading="lazy" title="" class="hatena-fotolife" itemprop="image"></span></p>
+<p><span itemscope itemtype="http://schema.org/Photograph"><img src="/assets/images/hatena/20210912110945.png" alt="f:id:kateinoigaku:20210912110945p:plain" loading="lazy" title="" class="hatena-fotolife" itemprop="image"></span></p>
 
 <table>
 <thead>
