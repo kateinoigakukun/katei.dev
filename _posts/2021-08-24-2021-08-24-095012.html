@@ -22,9 +22,9 @@ permalink: /blog/2021/08/24/095012/
 <li>メンバー
 
 <ul>
-<li><a href="https://twitter.com/___freddi___">@freddi</a></li>
-<li><a href="https://twitter.com/giginet">@giginet</a></li>
-<li><a href="https://twitter.com/kateinoigakukun">@kateinoigakukun</a></li>
+<li><a href="https://twitter.com/___freddi___" target="_blank" rel="noopener noreferrer">@freddi</a></li>
+<li><a href="https://twitter.com/giginet" target="_blank" rel="noopener noreferrer">@giginet</a></li>
+<li><a href="https://twitter.com/kateinoigakukun" target="_blank" rel="noopener noreferrer">@kateinoigakukun</a></li>
 </ul>
 </li>
 <li>全員iOSアプリ開発人材</li>
@@ -42,7 +42,7 @@ permalink: /blog/2021/08/24/095012/
 
 <p>・他の言語による再実装</p></blockquote>
 
-<p><a href="https://isucon.net/archives/55854734.html">ISUCON11 &#x4E88;&#x9078;&#x30EC;&#x30AE;&#x30E5;&#x30EC;&#x30FC;&#x30B7;&#x30E7;&#x30F3; : ISUCON&#x516C;&#x5F0F;Blog</a></p>
+<p><a href="https://isucon.net/archives/55854734.html" target="_blank" rel="noopener noreferrer">ISUCON11 &#x4E88;&#x9078;&#x30EC;&#x30AE;&#x30E5;&#x30EC;&#x30FC;&#x30B7;&#x30E7;&#x30F3; : ISUCON&#x516C;&#x5F0F;Blog</a></p>
 
 <p>Swiftの実装は残念ながら提供されていませんが、せっかく参加するのであればチームの得意分野を活かしたい、ということで競技時間内にSwiftで再実装する事になりました。</p>
 
@@ -54,7 +54,7 @@ permalink: /blog/2021/08/24/095012/
 
 <p>が、今回はLinuxにデプロイするSwiftアプリを開発するため、特に制約はありません。最新の言語機能も使い放題です。</p>
 
-<p>というわけで、Swiftツールチェインとして正式リリース前のSwift 5.5を採用しました。Swift 5.5には<a href="https://docs.swift.org/swift-book/LanguageGuide/Concurrency.html">並行プログラミングの言語機能が追加されており</a>、Non-blocking IOを使ったアプリを書くのにもってこいです。</p>
+<p>というわけで、Swiftツールチェインとして正式リリース前のSwift 5.5を採用しました。Swift 5.5には<a href="https://docs.swift.org/swift-book/LanguageGuide/Concurrency.html" target="_blank" rel="noopener noreferrer">並行プログラミングの言語機能が追加されており</a>、Non-blocking IOを使ったアプリを書くのにもってこいです。</p>
 
 <p>今回はswift-5.5-DEVELOPMENT-SNAPSHOT-2021-07-30-aを使いました。</p>
 
@@ -63,23 +63,23 @@ permalink: /blog/2021/08/24/095012/
 <p>現在アクティブにメンテナンスされているSwift製Webフレームワークはかなり少なくなっており、ほぼVapor一択な状況でした。
 かなり重厚な作りになっていますが、必要な機能は一通り揃っています。</p>
 
-<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fvapor%2Fvapor" title="GitHub - vapor/vapor: 💧 A server-side Swift web framework." class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/vapor/vapor">github.com</a></cite></p>
+<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fvapor%2Fvapor" title="GitHub - vapor/vapor: 💧 A server-side Swift web framework." class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/vapor/vapor" target="_blank" rel="noopener noreferrer">github.com</a></cite></p>
 
 <p>Vaporが依存しているNon-blocking IOを実現するライブラリSwiftNIOは、言語側のConcurrency機能との橋渡しをサポートしており、SwiftNIO内のFuture型を簡単にasyncメソッド呼び出しとして取り出すことができます。</p>
 
-<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fapple%2Fswift-nio%2Fblob%2F2.32.1%2FSources%2F_NIOConcurrency%2FAsyncAwaitSupport.swift" title="swift-nio/AsyncAwaitSupport.swift at 2.32.1 · apple/swift-nio" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/apple/swift-nio/blob/2.32.1/Sources/_NIOConcurrency/AsyncAwaitSupport.swift">github.com</a></cite></p>
+<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fapple%2Fswift-nio%2Fblob%2F2.32.1%2FSources%2F_NIOConcurrency%2FAsyncAwaitSupport.swift" title="swift-nio/AsyncAwaitSupport.swift at 2.32.1 · apple/swift-nio" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/apple/swift-nio/blob/2.32.1/Sources/_NIOConcurrency/AsyncAwaitSupport.swift" target="_blank" rel="noopener noreferrer">github.com</a></cite></p>
 
 <p>また、VaporはSwiftNIOのConcurrencyサポートを利用して、Vapor自体のConcurrency APIサポートを進めており、 メインメンテナの@0xTimさんのPR上で開発が進行している状況です。今回はこのPRブランチを使用しました。</p>
 
-<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fvapor%2Fvapor%2Fpull%2F2613" title="Add support for async/await by 0xTim · Pull Request #2613 · vapor/vapor" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/vapor/vapor/pull/2613">github.com</a></cite></p>
+<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fvapor%2Fvapor%2Fpull%2F2613" title="Add support for async/await by 0xTim · Pull Request #2613 · vapor/vapor" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/vapor/vapor/pull/2613" target="_blank" rel="noopener noreferrer">github.com</a></cite></p>
 
 <h3>SQLライブラリ</h3>
 
-<p>Vaporは複数のSQLバックエンドをサポートするための抽象レイヤとして<a href="https://github.com/vapor/fluent">Fluent</a> というORMを提供しています。しかし過去の経験から、抽象化されたDSLで思い通りのSQLを発行するのが非常に難しいことが分かっていたため、今回は採用を見送りました。</p>
+<p>Vaporは複数のSQLバックエンドをサポートするための抽象レイヤとして<a href="https://github.com/vapor/fluent" target="_blank" rel="noopener noreferrer">Fluent</a> というORMを提供しています。しかし過去の経験から、抽象化されたDSLで思い通りのSQLを発行するのが非常に難しいことが分かっていたため、今回は採用を見送りました。</p>
 
 <p>代わりに、バックエンドをMySQLのみに絞ったMySQLKitを採用しました。(FluentでMySQLバックエンドを使う場合もこれが使われる）</p>
 
-<p>MySQLKitはlibmysqlclientに依存せず、SwiftNIOベースの非同期IOで実装された<a href="https://github.com/vapor/mysql-nio">MySQLNIO</a>をMySQLクライアントとして使っています。ちょっとうれしいですね。</p>
+<p>MySQLKitはlibmysqlclientに依存せず、SwiftNIOベースの非同期IOで実装された<a href="https://github.com/vapor/mysql-nio" target="_blank" rel="noopener noreferrer">MySQLNIO</a>をMySQLクライアントとして使っています。ちょっとうれしいですね。</p>
 
 <p>MySQLKitは高度な機能は提供しませんが、行をSwiftの構造体にマップするできるので今回の用途では十分でした。</p>
 
@@ -94,7 +94,7 @@ permalink: /blog/2021/08/24/095012/
 </pre>
 
 
-<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fvapor%2Fmysql-kit" title="GitHub - vapor/mysql-kit: 🐬 Pure Swift MySQL client built on non-blocking, event-driven sockets." class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/vapor/mysql-kit">github.com</a></cite></p>
+<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fvapor%2Fmysql-kit" title="GitHub - vapor/mysql-kit: 🐬 Pure Swift MySQL client built on non-blocking, event-driven sockets." class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/vapor/mysql-kit" target="_blank" rel="noopener noreferrer">github.com</a></cite></p>
 
 <h3>最終的なPackage.swift</h3>
 

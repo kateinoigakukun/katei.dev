@@ -18,20 +18,20 @@ permalink: /blog/2021/09/12/123857/
 
 <h2>インターンの内容</h2>
 
-<p>TypeProfはクックパッドでフルタイムRubyコミッタをされている<a href="https://twitter.com/mametter">@mametter</a>さんが開発しているRubyの型プロファイラです。
+<p>TypeProfはクックパッドでフルタイムRubyコミッタをされている<a href="https://twitter.com/mametter" target="_blank" rel="noopener noreferrer">@mametter</a>さんが開発しているRubyの型プロファイラです。
 Rubyのプログラムにできるだけ型注釈を入れずに抽象解釈によって型を推論する、という面白い特徴があります。</p>
 
 <p>Ruby 3.0ではRBSのプロトタイプを生成するためのツールとしてRubyにバンドルされています。</p>
 
-<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fruby%2Ftypeprof%2F" title="GitHub - ruby/typeprof: An experimental type-level Ruby interpreter for testing and understanding Ruby code" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/ruby/typeprof/">github.com</a></cite></p>
+<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fruby%2Ftypeprof%2F" title="GitHub - ruby/typeprof: An experimental type-level Ruby interpreter for testing and understanding Ruby code" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/ruby/typeprof/" target="_blank" rel="noopener noreferrer">github.com</a></cite></p>
 
 <p>今回のインターンでは、TypeProfの解析結果を利用したRubyのLanguage Serverの実装をお手伝いしました。</p>
 
-<p>TypeProf for IDEについては<a href="https://rubykaigi.org/2021-takeout/presentations/mametter.html">今年のRubyKaigi Takeout 2021のKeynote</a>で発表があったので、雰囲気を知りたい方はこちらを見てください。</p>
+<p>TypeProf for IDEについては<a href="https://rubykaigi.org/2021-takeout/presentations/mametter.html" target="_blank" rel="noopener noreferrer">今年のRubyKaigi Takeout 2021のKeynote</a>で発表があったので、雰囲気を知りたい方はこちらを見てください。</p>
 
-<p><iframe src="https://www.youtube.com/embed/uNttp63ELoE?feature=oembed" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe><cite class="hatena-citation"><a href="https://www.youtube.com/watch?v=uNttp63ELoE">www.youtube.com</a></cite></p>
+<p><iframe src="https://www.youtube.com/embed/uNttp63ELoE?feature=oembed" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe><cite class="hatena-citation"><a href="https://www.youtube.com/watch?v=uNttp63ELoE" target="_blank" rel="noopener noreferrer">www.youtube.com</a></cite></p>
 
-<p><iframe src="https://www.slideshare.net/slideshow/embed_code/key/9pxYYHtUcXCkvP" frameborder="0" marginwidth="0" marginheight="0" scrolling="no" style="border:1px solid #CCC; border-width:1px; margin-bottom:5px; max-width: 100%;" allowfullscreen> </iframe> <div style="margin-bottom:5px"> <strong> <a href="https://www.slideshare.net/mametter/typeprof-for-ide-enrich-development-experience-without-annotations" title="TypeProf for IDE: Enrich Development Experience without Annotations" target="_blank">TypeProf for IDE: Enrich Development Experience without Annotations</a> </strong> from <strong><a href="https://www.slideshare.net/mametter" target="_blank">mametter</a></strong> </div>  <cite class="hatena-citation"><a href="https://www.slideshare.net/mametter/typeprof-for-ide-enrich-development-experience-without-annotations">www.slideshare.net</a></cite></p>
+<p><iframe src="https://www.slideshare.net/slideshow/embed_code/key/9pxYYHtUcXCkvP" frameborder="0" marginwidth="0" marginheight="0" scrolling="no" style="border:1px solid #CCC; border-width:1px; margin-bottom:5px; max-width: 100%;" allowfullscreen> </iframe> <div style="margin-bottom:5px"> <strong> <a href="https://www.slideshare.net/mametter/typeprof-for-ide-enrich-development-experience-without-annotations" title="TypeProf for IDE: Enrich Development Experience without Annotations" target="_blank">TypeProf for IDE: Enrich Development Experience without Annotations</a> </strong> from <strong><a href="https://www.slideshare.net/mametter" target="_blank">mametter</a></strong> </div>  <cite class="hatena-citation"><a href="https://www.slideshare.net/mametter/typeprof-for-ide-enrich-development-experience-without-annotations" target="_blank" rel="noopener noreferrer">www.slideshare.net</a></cite></p>
 
 <h3>実装</h3>
 
@@ -42,16 +42,16 @@ Rubyのプログラムにできるだけ型注釈を入れずに抽象解釈に�
 
 
 
-<p><a href="https://github.com/ruby/typeprof/pull/34">Add --port option to lsp server for debugging purpose by kateinoigakukun &middot; Pull Request #34 &middot; ruby/typeprof &middot; GitHub</a></p>
+<p><a href="https://github.com/ruby/typeprof/pull/34" target="_blank" rel="noopener noreferrer">Add --port option to lsp server for debugging purpose by kateinoigakukun &middot; Pull Request #34 &middot; ruby/typeprof &middot; GitHub</a></p>
 
 <p>その後mameさんに助けてもらいながら数種類のコードジャンプを実装しました。
 ジャンプ先候補はTypeProfの解析結果を使っているので、解析器自体の実装も勉強できて良かったです。</p>
 
 <ul>
-<li><a href="https://github.com/ruby/typeprof/pull/36">LSP: Support local variable definition jump</a></li>
-<li><a href="https://github.com/ruby/typeprof/pull/39">LSP: Support instance variable definition jump</a></li>
-<li><a href="https://github.com/ruby/typeprof/pull/45">LSP: Support Find References for methods</a></li>
-<li><a href="https://github.com/ruby/typeprof/pull/47">LSP: Support class/const definition jump</a></li>
+<li><a href="https://github.com/ruby/typeprof/pull/36" target="_blank" rel="noopener noreferrer">LSP: Support local variable definition jump</a></li>
+<li><a href="https://github.com/ruby/typeprof/pull/39" target="_blank" rel="noopener noreferrer">LSP: Support instance variable definition jump</a></li>
+<li><a href="https://github.com/ruby/typeprof/pull/45" target="_blank" rel="noopener noreferrer">LSP: Support Find References for methods</a></li>
+<li><a href="https://github.com/ruby/typeprof/pull/47" target="_blank" rel="noopener noreferrer">LSP: Support class/const definition jump</a></li>
 </ul>
 
 
@@ -83,17 +83,17 @@ Rubyのプログラムにできるだけ型注釈を入れずに抽象解釈に�
 </table>
 
 
-<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fruby%2Ftypeprof%2Fpull%2F42" title="LSP: Background analysis by kateinoigakukun · Pull Request #42 · ruby/typeprof" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/ruby/typeprof/pull/42">github.com</a></cite></p>
+<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fruby%2Ftypeprof%2Fpull%2F42" title="LSP: Background analysis by kateinoigakukun · Pull Request #42 · ruby/typeprof" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/ruby/typeprof/pull/42" target="_blank" rel="noopener noreferrer">github.com</a></cite></p>
 
 <p>その他にも色々と実装できて楽しかったです。</p>
 
-<p><a href="https://github.com/ruby/typeprof/pulls?q=is%3Apr+author%3Akateinoigakukun+is%3Aclosed+created%3A%3C2021-08-31">インターン中のPRs</a></p>
+<p><a href="https://github.com/ruby/typeprof/pulls?q=is%3Apr+author%3Akateinoigakukun+is%3Aclosed+created%3A%3C2021-08-31" target="_blank" rel="noopener noreferrer">インターン中のPRs</a></p>
 
 <h3>Ruby本体への貢献</h3>
 
 <p>TypeProf for IDEは最新の開発版MRI (Matz's Ruby Interpreter) のAPIを使っており、CIではデイリービルドされた最新のRubyバイナリを使っています。</p>
 
-<p>具体的には、<a href="https://github.com/ruby/setup-ruby">ruby/setup-ruby</a> のGitHub Actionsのアクション経由で <a href="https://github.com/ruby/ruby-dev-builder">ruby/ruby-dev-builder</a> でビルドされた成果物を使っていました。</p>
+<p>具体的には、<a href="https://github.com/ruby/setup-ruby" target="_blank" rel="noopener noreferrer">ruby/setup-ruby</a> のGitHub Actionsのアクション経由で <a href="https://github.com/ruby/ruby-dev-builder" target="_blank" rel="noopener noreferrer">ruby/ruby-dev-builder</a> でビルドされた成果物を使っていました。</p>
 
 <p>しかし、ある日直近で入ったAPI変更に追従する変更をTypeProfに入れたところ、CI上のテストが失敗し始めました。</p>
 
@@ -101,17 +101,17 @@ Rubyのプログラムにできるだけ型注釈を入れずに抽象解釈に�
 
 <p>そして、特定のビルドオプションを付けたときのみ再現する問題であったため、ruby本体のCIを奇跡的に通り抜けていました。</p>
 
-<p>（macOSはGPLv3を避けるためにGNU Makeのバージョンを3.81で止めている。<a href="https://savannah.gnu.org/forum/forum.php?forum_id=4380">ちなみに3.81は2006年リリース。最新は4.2</a>）</p>
+<p>（macOSはGPLv3を避けるためにGNU Makeのバージョンを3.81で止めている。<a href="https://savannah.gnu.org/forum/forum.php?forum_id=4380" target="_blank" rel="noopener noreferrer">ちなみに3.81は2006年リリース。最新は4.2</a>）</p>
 
 <p>とりあえずの対処としてGNU Make 3.81で最新のバージョンと同様の動作をさせるためのワークアラウンドを追加しました。</p>
 
-<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fruby%2Fruby%2Fpull%2F4776" title="Fix build failure on macOS with --enable-shared by kateinoigakukun · Pull Request #4776 · ruby/ruby" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/ruby/ruby/pull/4776">github.com</a></cite></p>
+<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fruby%2Fruby%2Fpull%2F4776" title="Fix build failure on macOS with --enable-shared by kateinoigakukun · Pull Request #4776 · ruby/ruby" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/ruby/ruby/pull/4776" target="_blank" rel="noopener noreferrer">github.com</a></cite></p>
 
 <p>ということで晴れてRuby Contributorの実績も解除できました。</p>
 
 <h2>クックパッドの環境</h2>
 
-<p>ruby-devチームの朝会では<a href="https://twitter.com/_ko1">@_ko1</a> さんと<a href="https://twitter.com/mametter">@mametter</a>さんがRubyの話を、僕がSwiftとWebAssemblyの話をする機会があったり、母国語で言語処理系のプロと働けるとても貴重な環境でした。</p>
+<p>ruby-devチームの朝会では<a href="https://twitter.com/_ko1" target="_blank" rel="noopener noreferrer">@_ko1</a> さんと<a href="https://twitter.com/mametter" target="_blank" rel="noopener noreferrer">@mametter</a>さんがRubyの話を、僕がSwiftとWebAssemblyの話をする機会があったり、母国語で言語処理系のプロと働けるとても貴重な環境でした。</p>
 
 <h2>感想</h2>
 

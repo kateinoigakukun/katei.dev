@@ -22,7 +22,7 @@ permalink: /blog/2019/06/08/232142/
 ここで考察した内容とほぼ同じようなテクニックを使って<code>State</code>を実装しています。
 具体的な実装が気になる方は読んでみてください。</p>
 
-<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2FTokamakUI%2FTokamak" title="GitHub - TokamakUI/Tokamak: SwiftUI-compatible framework for building browser apps with WebAssembly and native apps for other platforms" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;" loading="lazy"></iframe><cite class="hatena-citation"><a href="https://github.com/TokamakUI/Tokamak">github.com</a></cite></p>
+<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2FTokamakUI%2FTokamak" title="GitHub - TokamakUI/Tokamak: SwiftUI-compatible framework for building browser apps with WebAssembly and native apps for other platforms" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;" loading="lazy"></iframe><cite class="hatena-citation"><a href="https://github.com/TokamakUI/Tokamak" target="_blank" rel="noopener noreferrer">github.com</a></cite></p>
 
 <h3 id="目次">目次</h3>
 
@@ -41,7 +41,7 @@ permalink: /blog/2019/06/08/232142/
 
 <p>チュートリアルをこなした方であれば何度も書いたことでしょう。</p>
 
-<p>Swift5.1からの<a href="https://github.com/apple/swift-evolution/blob/master/proposals/0258-property-delegates.md">Property Delegates</a>を使った記法で、プロパティの値のgetterとsetterを別の型（ここでは<code>State</code>）に委譲できます。</p>
+<p>Swift5.1からの<a href="https://github.com/apple/swift-evolution/blob/master/proposals/0258-property-delegates.md" target="_blank" rel="noopener noreferrer">Property Delegates</a>を使った記法で、プロパティの値のgetterとsetterを別の型（ここでは<code>State</code>）に委譲できます。</p>
 
 <p><code>State</code>というのはSwiftUIに定義された<code>@propertyDelegate</code>なstructです。変更されるとStateが定義されているViewが再レンダリングされる、という振る舞いをします。</p>
 
@@ -188,7 +188,7 @@ Body:
 
 <h2 id="Mirrorを使わないReflection"><code>Mirror</code>を使わないReflection</h2>
 
-<p><code>Mirror</code>を使わずともフィールドを取得する方法はまだあります。そうですメタデータを利用する方法です。<a href="https://twitter.com/kateinoigakukun/status/1109019101224001536">メタデータについては僕のtry! Swiftの発表を見てもらえると雰囲気が掴めると思います。</a></p>
+<p><code>Mirror</code>を使わずともフィールドを取得する方法はまだあります。そうですメタデータを利用する方法です。<a href="https://twitter.com/kateinoigakukun/status/1109019101224001536" target="_blank" rel="noopener noreferrer">メタデータについては僕のtry! Swiftの発表を見てもらえると雰囲気が掴めると思います。</a></p>
 
 <p>メタデータには<code>Field Descriptor</code>という、その型のフィールドのアクセサ群が格納されています。それを利用すればフィールドの一覧を取得できるので<code>Mirror</code>の代わりに使っている可能性は十分にあります。</p>
 

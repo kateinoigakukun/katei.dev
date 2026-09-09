@@ -9,7 +9,7 @@ permalink: /blog/2020/02/29/134510/
 
 <p>こんにちは。私はSwift言語のWebAssembly向けコンパイルをサポートするプロジェクトを進めている一人です。</p>
 
-<p>その開発を効率的に進めていくためにWebAssembly向けのデバッガ<a href="https://github.com/kateinoigakukun/wasminspect">wasminspect</a>を開発しました。</p>
+<p>その開発を効率的に進めていくためにWebAssembly向けのデバッガ<a href="https://github.com/kateinoigakukun/wasminspect" target="_blank" rel="noopener noreferrer">wasminspect</a>を開発しました。</p>
 
 <h2>Swift for WebAssemblyの進捗</h2>
 
@@ -29,7 +29,7 @@ permalink: /blog/2020/02/29/134510/
 
 <p>という感じです。</p>
 
-<p><blockquote class="twitter-tweet" data-lang="ja"><p lang="en" dir="ltr">Our co-maintainer <a href="https://twitter.com/kateinoigakukun?ref_src=twsrc%5Etfw">@kateinoigakukun</a> has posted a detailed update on the current status of SwiftWasm and remaining issues that are being worked on or require contributions from the community (please do get involved!):<a href="https://t.co/LHMAXy3hwv">https://t.co/LHMAXy3hwv</a></p>&mdash; SwiftWasm (@swiftwasm) <a href="https://twitter.com/swiftwasm/status/1229775798611120128?ref_src=twsrc%5Etfw">2020年2月18日</a></blockquote><script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script></p>
+<p><blockquote class="twitter-tweet" data-lang="ja"><p lang="en" dir="ltr">Our co-maintainer <a href="https://twitter.com/kateinoigakukun?ref_src=twsrc%5Etfw" target="_blank" rel="noopener noreferrer">@kateinoigakukun</a> has posted a detailed update on the current status of SwiftWasm and remaining issues that are being worked on or require contributions from the community (please do get involved!):<a href="https://t.co/LHMAXy3hwv" target="_blank" rel="noopener noreferrer">https://t.co/LHMAXy3hwv</a></p>&mdash; SwiftWasm (@swiftwasm) <a href="https://twitter.com/swiftwasm/status/1229775798611120128?ref_src=twsrc%5Etfw" target="_blank" rel="noopener noreferrer">2020年2月18日</a></blockquote><script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script></p>
 
 <p>これをデバッグする必要が出てきたこと、既存のデバッグ手法では太刀打ちできないことから今回のデバッガを開発することにしました。</p>
 
@@ -69,19 +69,19 @@ permalink: /blog/2020/02/29/134510/
 
 <p>OSSとして開発されているので開発に参加することも考えましたが、プロジェクトが非常に大きいこと、v8とのインテグレーション作業に時間がかかりそうなことから、見送りました。</p>
 
-<p><blockquote class="twitter-tweet" data-lang="ja"><p lang="en" dir="ltr">Initial DWARF support has landed in Chrome DevTools!<br><br>It means that you can resolve stack traces, set breakpoints and step-in/-over source code in C/C++/Rust natively, without generating source maps. <a href="https://t.co/s3IwkJV6Tr">pic.twitter.com/s3IwkJV6Tr</a></p>&mdash; Chrome DevTools (@ChromeDevTools) <a href="https://twitter.com/ChromeDevTools/status/1192803818024710145?ref_src=twsrc%5Etfw">2019年11月8日</a></blockquote><script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script></p>
+<p><blockquote class="twitter-tweet" data-lang="ja"><p lang="en" dir="ltr">Initial DWARF support has landed in Chrome DevTools!<br><br>It means that you can resolve stack traces, set breakpoints and step-in/-over source code in C/C++/Rust natively, without generating source maps. <a href="https://t.co/s3IwkJV6Tr" target="_blank" rel="noopener noreferrer">pic.twitter.com/s3IwkJV6Tr</a></p>&mdash; Chrome DevTools (@ChromeDevTools) <a href="https://twitter.com/ChromeDevTools/status/1192803818024710145?ref_src=twsrc%5Etfw" target="_blank" rel="noopener noreferrer">2019年11月8日</a></blockquote><script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script></p>
 
-<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fdevelopers.google.com%2Fweb%2Fupdates%2F2019%2F12%2Fwebassembly%23background" title="Improved WebAssembly debugging in Chrome DevTools  |  Google Developers" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://developers.google.com/web/updates/2019/12/webassembly#background">developers.google.com</a></cite></p>
+<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fdevelopers.google.com%2Fweb%2Fupdates%2F2019%2F12%2Fwebassembly%23background" title="Improved WebAssembly debugging in Chrome DevTools  |  Google Developers" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://developers.google.com/web/updates/2019/12/webassembly#background" target="_blank" rel="noopener noreferrer">developers.google.com</a></cite></p>
 
 <h3>LLDB + wasmtime</h3>
 
 <p>wasmtimeはMozillaが開発しているWebAssemblyのJITコンパイラです。</p>
 
-<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fbytecodealliance%2Fwasmtime%2F" title="bytecodealliance/wasmtime" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/bytecodealliance/wasmtime/">github.com</a></cite></p>
+<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fbytecodealliance%2Fwasmtime%2F" title="bytecodealliance/wasmtime" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/bytecodealliance/wasmtime/" target="_blank" rel="noopener noreferrer">github.com</a></cite></p>
 
 <p>LLDBやGDBにはJITコンパイルされたネイティブコードとデバッグ情報からデバッグする機能があります。</p>
 
-<p><a href="https://llvm.org/docs/DebuggingJITedCode.html">Debugging JIT-ed Code With GDB &mdash; LLVM 10 documentation</a></p>
+<p><a href="https://llvm.org/docs/DebuggingJITedCode.html" target="_blank" rel="noopener noreferrer">Debugging JIT-ed Code With GDB &mdash; LLVM 10 documentation</a></p>
 
 <p>wasmtimeはWASMに埋め込まれたDWARFをJITコンパイル後のアーキテクチャ向けに変換して、LLDBと通信することでソースレベルデバッグを実現しています。</p>
 
@@ -96,7 +96,7 @@ permalink: /blog/2020/02/29/134510/
 <iframe src="https://www.youtube.com/embed/PevI_Mn-UUE" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
 
-<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fhacks.mozilla.org%2F2019%2F09%2Fdebugging-webassembly-outside-of-the-browser%2F" title="Debugging WebAssembly Outside of the Browser – Mozilla Hacks - the Web developer blog" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://hacks.mozilla.org/2019/09/debugging-webassembly-outside-of-the-browser/">hacks.mozilla.org</a></cite></p>
+<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fhacks.mozilla.org%2F2019%2F09%2Fdebugging-webassembly-outside-of-the-browser%2F" title="Debugging WebAssembly Outside of the Browser – Mozilla Hacks - the Web developer blog" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://hacks.mozilla.org/2019/09/debugging-webassembly-outside-of-the-browser/" target="_blank" rel="noopener noreferrer">hacks.mozilla.org</a></cite></p>
 
 <h2>本当に欲しかったデバッガの要件</h2>
 
@@ -120,9 +120,9 @@ permalink: /blog/2020/02/29/134510/
 
 <h2>wasminspect</h2>
 
-<p><a href="https://raw.githubusercontent.com/kateinoigakukun/wasminspect/master/assets/demo.gif" class="http-image"><img src="https://raw.githubusercontent.com/kateinoigakukun/wasminspect/master/assets/demo.gif" class="http-image" alt="https://raw.githubusercontent.com/kateinoigakukun/wasminspect/master/assets/demo.gif"></a></p>
+<p><a href="https://raw.githubusercontent.com/kateinoigakukun/wasminspect/master/assets/demo.gif" class="http-image" target="_blank" rel="noopener noreferrer"><img src="https://raw.githubusercontent.com/kateinoigakukun/wasminspect/master/assets/demo.gif" class="http-image" alt="https://raw.githubusercontent.com/kateinoigakukun/wasminspect/master/assets/demo.gif"></a></p>
 
-<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fkateinoigakukun%2Fwasminspect" title="kateinoigakukun/wasminspect" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/kateinoigakukun/wasminspect">github.com</a></cite></p>
+<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fkateinoigakukun%2Fwasminspect" title="kateinoigakukun/wasminspect" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/kateinoigakukun/wasminspect" target="_blank" rel="noopener noreferrer">github.com</a></cite></p>
 
 <p>GIFでだいたいの雰囲気は伝わると思います。</p>
 
@@ -134,13 +134,13 @@ permalink: /blog/2020/02/29/134510/
 
 <p>ランタイムはJITコンパイルもAOTコンパイルもせず、愚直にインタプリタとして実装しました。これはWebAssembly命令レベルでのステップ実行を実現するためです。また、wasmtimeとLLDBの組み合わせのときに発生したデバッグ情報の伝播も必要なくなりました。</p>
 
-<p>ランタイムの開発は公式の<a href="https://webassembly.github.io/spec/core/index.html">ドキュメント</a>や<a href="https://github.com/webassembly/spec">テストケース</a>が充実していて非常にスムーズに進みました。</p>
+<p>ランタイムの開発は公式の<a href="https://webassembly.github.io/spec/core/index.html" target="_blank" rel="noopener noreferrer">ドキュメント</a>や<a href="https://github.com/webassembly/spec" target="_blank" rel="noopener noreferrer">テストケース</a>が充実していて非常にスムーズに進みました。</p>
 
 <h3>DWARF for WebAssembly</h3>
 
 <p>正直DWARF対応だけで何本かブログが書けそうなくらいしんどかったです。基本的に仕様を読みながらLLDBのコードを参考にして実装するだけでしたが、単純に量が多かったです。</p>
 
-<p><iframe src="https://hatenablog-parts.com/embed?url=http%3A%2F%2Fdwarfstd.org%2FDownload.php" title="Download DWARF Standards" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="http://dwarfstd.org/Download.php">dwarfstd.org</a></cite></p>
+<p><iframe src="https://hatenablog-parts.com/embed?url=http%3A%2F%2Fdwarfstd.org%2FDownload.php" title="Download DWARF Standards" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="http://dwarfstd.org/Download.php" target="_blank" rel="noopener noreferrer">dwarfstd.org</a></cite></p>
 
 <p>WebAssemblyに固有の話としてはDWARF上のスタックとLLVMが吐くWebAssemblyのスタックが一致しない、ということがありました。
 LLVMが吐くWebAssemblyでは線形メモリ上に擬似スタックのような空間を確保してそこを伸び縮みさせてフレーム変数を管理しています。（WebAssemblyの仕様で定義されているスタックとは別）
@@ -148,22 +148,22 @@ LLVMが吐くWebAssemblyでは線形メモリ上に擬似スタックのよう�
 
 <p>DWARFが示すスタックはこの擬似スタックにほぼ対応しているので、LLVMの実装に依存することでローカル変数のダンプができるようになりました。</p>
 
-<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fllvm%2Fllvm-project%2Fblob%2F23db9724d0e5490fa5a2a726acf015f84e2c87cf%2Fllvm%2Flib%2FTarget%2FWebAssembly%2FWebAssemblyFrameLowering.cpp%23L153-L224" title="llvm/llvm-project" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/llvm/llvm-project/blob/23db9724d0e5490fa5a2a726acf015f84e2c87cf/llvm/lib/Target/WebAssembly/WebAssemblyFrameLowering.cpp#L153-L224">github.com</a></cite></p>
+<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fllvm%2Fllvm-project%2Fblob%2F23db9724d0e5490fa5a2a726acf015f84e2c87cf%2Fllvm%2Flib%2FTarget%2FWebAssembly%2FWebAssemblyFrameLowering.cpp%23L153-L224" title="llvm/llvm-project" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/llvm/llvm-project/blob/23db9724d0e5490fa5a2a726acf015f84e2c87cf/llvm/lib/Target/WebAssembly/WebAssemblyFrameLowering.cpp#L153-L224" target="_blank" rel="noopener noreferrer">github.com</a></cite></p>
 
 <p>将来的にはWebAssembly向けの位置情報がDWARFの仕様に追加されるんじゃないかなぁと予想しています。既にドラフトの文書があったりします。</p>
 
-<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fyurydelendik.github.io%2Fwebassembly-dwarf%2F%23DWARF-expressions-and-location-descriptions" title="DWARF for WebAssembly" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://yurydelendik.github.io/webassembly-dwarf/#DWARF-expressions-and-location-descriptions">yurydelendik.github.io</a></cite></p>
+<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fyurydelendik.github.io%2Fwebassembly-dwarf%2F%23DWARF-expressions-and-location-descriptions" title="DWARF for WebAssembly" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://yurydelendik.github.io/webassembly-dwarf/#DWARF-expressions-and-location-descriptions" target="_blank" rel="noopener noreferrer">yurydelendik.github.io</a></cite></p>
 
 <h2>自作デバッガの功績</h2>
 
 <p>今回作ったデバッガは既にいくつかのSwiftのバグを修正するのに大きく貢献しています。特にメモリダンプ機能は非常に便利で、正常に動くx86_64向けバイナリと比較することで破壊されたメモリの位置を特定できます。</p>
 
-<p><blockquote class="twitter-tweet" data-lang="ja"><p lang="ja" dir="ltr">僕もメモリダンプとにらめっこしてる <a href="https://t.co/lwLBWK2rkT">pic.twitter.com/lwLBWK2rkT</a></p>&mdash; kateinoigakukun (@kateinoigakukun) <a href="https://twitter.com/kateinoigakukun/status/1230852066702049282?ref_src=twsrc%5Etfw">2020年2月21日</a></blockquote><script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script></p>
+<p><blockquote class="twitter-tweet" data-lang="ja"><p lang="ja" dir="ltr">僕もメモリダンプとにらめっこしてる <a href="https://t.co/lwLBWK2rkT" target="_blank" rel="noopener noreferrer">pic.twitter.com/lwLBWK2rkT</a></p>&mdash; kateinoigakukun (@kateinoigakukun) <a href="https://twitter.com/kateinoigakukun/status/1230852066702049282?ref_src=twsrc%5Etfw" target="_blank" rel="noopener noreferrer">2020年2月21日</a></blockquote><script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script></p>
 
 <h2>まとめ</h2>
 
 <p>一応一通り動くデバッガができましたが、基本的に僕自身がSwift for WASMの開発をするための道具として開発しているだけなので、あまり他の環境で使われることを考慮していません。試していないですが、多分EmscriptenではDWARFの解釈がうまく行かないと思います。</p>
 
-<p><a href="https://github.com/kateinoigakukun/wasminspect/blob/master/docs/tutorial.md">ドキュメント</a>を軽く書いたのでもし興味があれば触ってみてください。</p>
+<p><a href="https://github.com/kateinoigakukun/wasminspect/blob/master/docs/tutorial.md" target="_blank" rel="noopener noreferrer">ドキュメント</a>を軽く書いたのでもし興味があれば触ってみてください。</p>
 
 <p>0からデバッガを作る機会はなかなか無いので楽しかったです。これからも「無いなら作ればいい」の精神でやっていきたいと思います。</p>

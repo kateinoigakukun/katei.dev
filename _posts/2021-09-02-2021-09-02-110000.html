@@ -9,7 +9,7 @@ permalink: /blog/2021/09/02/110000/
 
 <p>前回のエントリでAuto-linkingについて解説しました。今回はSwiftコンパイラにおけるAuto-linkingの使われ方と、最近それを直した話をします。</p>
 
-<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fkateinoigakukun.hatenablog.com%2Fentry%2F2021%2F08%2F28%2F223951" title="Auto-linkingまとめ - kateinoigakukunのブログ" class="embed-card embed-blogcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 190px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://kateinoigakukun.hatenablog.com/entry/2021/08/28/223951">kateinoigakukun.hatenablog.com</a></cite></p>
+<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fkateinoigakukun.hatenablog.com%2Fentry%2F2021%2F08%2F28%2F223951" title="Auto-linkingまとめ - kateinoigakukunのブログ" class="embed-card embed-blogcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 190px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://kateinoigakukun.hatenablog.com/entry/2021/08/28/223951" target="_blank" rel="noopener noreferrer">kateinoigakukun.hatenablog.com</a></cite></p>
 
 <h2>用語定義</h2>
 
@@ -75,7 +75,7 @@ $ swiftc main.swift -I. -L.</pre>
 &lt;/MODULE_BLOCK&gt;</pre>
 
 
-<p>以下にmacOS上でのMach-Oオブジェクトファイルの内容を示します。<a href="https://kateinoigakukun.hatenablog.com/entry/2021/08/28/223951">前回のエントリ</a>で紹介した <code>LC_LINKER_OPTION</code> に <code>-lfoo</code> が埋め込まれていますね。これをリンカに渡すことでユーザはリンカオプションを渡すこと無く、ライブラリをリンクできます。実は標準ライブラリも同様の仕組みでリンクされています。</p>
+<p>以下にmacOS上でのMach-Oオブジェクトファイルの内容を示します。<a href="https://kateinoigakukun.hatenablog.com/entry/2021/08/28/223951" target="_blank" rel="noopener noreferrer">前回のエントリ</a>で紹介した <code>LC_LINKER_OPTION</code> に <code>-lfoo</code> が埋め込まれていますね。これをリンカに渡すことでユーザはリンカオプションを渡すこと無く、ライブラリをリンクできます。実は標準ライブラリも同様の仕組みでリンクされています。</p>
 
 <pre class="code" data-lang="" data-unlink>$ swiftc -c main.swift -I. -o main.o
 $ llvm-objdump -m -x main.o
@@ -163,7 +163,7 @@ Load command 5
 
 <p>詳しい議論については以下のフォーラム投稿を見てください。</p>
 
-<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fforums.swift.org%2Ft%2Fupdate-on-implementation-only-imports%2F26996" title="Update on implementation-only imports" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://forums.swift.org/t/update-on-implementation-only-imports/26996">forums.swift.org</a></cite></p>
+<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fforums.swift.org%2Ft%2Fupdate-on-implementation-only-imports%2F26996" title="Update on implementation-only imports" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://forums.swift.org/t/update-on-implementation-only-imports/26996" target="_blank" rel="noopener noreferrer">forums.swift.org</a></cite></p>
 
 <p>ここで、次のケースを考えます。モジュールfooに依存するモジュールbarはfooをプライベートにインポートします。
 依存をプライベートにする、ということはライブラリの利用者mainは間接依存するfooの存在について関知せず、mainのリンク時にfooをリンクする必要があるか分かりません。
@@ -212,7 +212,7 @@ _ <span class="synIdentifier">=</span> dec(<span class="synConstant">1</span>)
 
 <p>さて、<code>@_implementaionOnly</code> 付きでもAuto-linkingはうまく動いているように思われましたが、実はこれだけでは上手く行かないケースがあります。</p>
 
-<p>ここでは実際に壊れてしまった Foundation (<a href="https://github.com/apple/swift-corelibs-foundation">apple/swift-corelibs-foundation</a>)のケースを紹介します。
+<p>ここでは実際に壊れてしまった Foundation (<a href="https://github.com/apple/swift-corelibs-foundation" target="_blank" rel="noopener noreferrer">apple/swift-corelibs-foundation</a>)のケースを紹介します。
 Foundationのモジュール依存関係は以下のようになっています。（説明のため簡略化してます）</p>
 
 <pre class="code" data-lang="" data-unlink>Foundation -&gt; CoreFoundation</pre>
@@ -232,7 +232,7 @@ icui18nはSwift標準ライブラリでも使われており、プログラム�
 
 <p>この問題により、Swift 5.4のLinux向けツールチェインではFoundationの静的リンク時にシンボル不足エラーが出ています。</p>
 
-<p><a href="https://bugs.swift.org/browse/SR-14536">[SR-14536] Importing FoundationNetworking with -static-stdlib is broken with missing symbols on Linux - Swift</a></p>
+<p><a href="https://bugs.swift.org/browse/SR-14536" target="_blank" rel="noopener noreferrer">[SR-14536] Importing FoundationNetworking with -static-stdlib is broken with missing symbols on Linux - Swift</a></p>
 
 <h2>修正編</h2>
 
@@ -243,14 +243,14 @@ icui18nはSwift標準ライブラリでも使われており、プログラム�
 
 <p>このパッチでは、<code>-public-autolink-library</code> というオプションを追加して、指定したライブラリを <code>LINK_LIBRARY</code>エントリ に出力するようにしています。</p>
 
-<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fforums.swift.org%2Ft%2Fautolinking-behavior-of-implementationonly-with-static-linking%2F44393" title="Autolinking behavior of @_implementationOnly with static linking" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://forums.swift.org/t/autolinking-behavior-of-implementationonly-with-static-linking/44393">forums.swift.org</a></cite></p>
+<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fforums.swift.org%2Ft%2Fautolinking-behavior-of-implementationonly-with-static-linking%2F44393" title="Autolinking behavior of @_implementationOnly with static linking" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://forums.swift.org/t/autolinking-behavior-of-implementationonly-with-static-linking/44393" target="_blank" rel="noopener noreferrer">forums.swift.org</a></cite></p>
 
-<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fapple%2Fswift%2Fpull%2F35936" title="[Frontend] Add -public-autolink-library option by kateinoigakukun · Pull Request #35936 · apple/swift" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/apple/swift/pull/35936">github.com</a></cite></p>
+<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fapple%2Fswift%2Fpull%2F35936" title="[Frontend] Add -public-autolink-library option by kateinoigakukun · Pull Request #35936 · apple/swift" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/apple/swift/pull/35936" target="_blank" rel="noopener noreferrer">github.com</a></cite></p>
 
 <p>コンパイラ側のパッチがマージされると、ようやくFoundation側の修正に取り組めます。
 このパッチでは、追加したオプションを使って <code>icui18n</code> へのライブラリ依存をFoundationに足しています。</p>
 
-<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fapple%2Fswift-corelibs-foundation%2Fpull%2F2996" title="Fix autolink mechanism for static libraries on Linux by kateinoigakukun · Pull Request #2996 · apple/swift-corelibs-foundation" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/apple/swift-corelibs-foundation/pull/2996">github.com</a></cite></p>
+<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fapple%2Fswift-corelibs-foundation%2Fpull%2F2996" title="Fix autolink mechanism for static libraries on Linux by kateinoigakukun · Pull Request #2996 · apple/swift-corelibs-foundation" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/apple/swift-corelibs-foundation/pull/2996" target="_blank" rel="noopener noreferrer">github.com</a></cite></p>
 
 <p>その後リバートやリバート返しを経て、最近ようやく直りました。</p>
 

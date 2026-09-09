@@ -10,7 +10,7 @@ permalink: /blog/2020/02/06/182214/
 <h2>背景</h2>
 
 <p>XcodeGenはXcodeのプロジェクトファイルをYAMLから生成するためのツールです。生のプロジェクトファイルは記述が冗長であったり、とても人間が手で管理できるものではないため、YAMLで管理しようというのがモチベーションです。
-<iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fyonaskolb%2FXcodeGen" title="yonaskolb/XcodeGen" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/yonaskolb/XcodeGen">github.com</a></cite></p>
+<iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fyonaskolb%2FXcodeGen" title="yonaskolb/XcodeGen" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/yonaskolb/XcodeGen" target="_blank" rel="noopener noreferrer">github.com</a></cite></p>
 
 <p>iOS/macOSアプリの開発においてライブラリ管理のデファクトスタンダードとなっているCocoaPodsというソフトウェアがあります。これはライブラリをビルドするためのプロジェクトファイル <code>Pods.xcodeproj</code> を生成し、メインのプロジェクトファイルと統合することでアプリにライブラリをインストールします。</p>
 
@@ -35,7 +35,7 @@ permalink: /blog/2020/02/06/182214/
 <p>実際に<code>pod install</code> を行ったときに発生するxcodeprojへのdiffがこちらです。</p>
 
 <p><details>
-<script src="https://gist.github.com/kateinoigakukun/be8d1c594c973534d5152233eea1bf19.js"> </script><cite class="hatena-citation"><a href="https://gist.github.com/kateinoigakukun/be8d1c594c973534d5152233eea1bf19">gist.github.com</a></cite>
+<script src="https://gist.github.com/kateinoigakukun/be8d1c594c973534d5152233eea1bf19.js"> </script><cite class="hatena-citation"><a href="https://gist.github.com/kateinoigakukun/be8d1c594c973534d5152233eea1bf19" target="_blank" rel="noopener noreferrer">gist.github.com</a></cite>
 </details></p>
 
 <ol>
@@ -123,7 +123,7 @@ end</pre>
 
 <h2>サンプルプロジェクト</h2>
 
-<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fkateinoigakukun%2FXcodeGenWithPods" title="kateinoigakukun/XcodeGenWithPods" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/kateinoigakukun/XcodeGenWithPods">github.com</a></cite></p>
+<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fkateinoigakukun%2FXcodeGenWithPods" title="kateinoigakukun/XcodeGenWithPods" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/kateinoigakukun/XcodeGenWithPods" target="_blank" rel="noopener noreferrer">github.com</a></cite></p>
 
 <p><code>targetTemplates</code>というXcodeGenの素晴らしい機能を使って汎用的なproject.ymlにしているので、これをコピペするだけで大抵の環境では動くはずです。</p>
 

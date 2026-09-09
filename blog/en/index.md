@@ -4,8 +4,8 @@ title: English posts
 language: en
 ---
 <section>
-  <p class="eyebrow">Writing · English</p>
   <h1>English posts</h1>
+  <p><a href="{{ '/blog/ja/' | relative_url }}">日本語</a> · <a href="{{ '/blog/en/' | relative_url }}">English</a></p>
   <ul class="post-list">
     {% assign posts = site.posts | concat: site.external_posts | where: "language", "en" | sort: "date" | reverse %}
     {% for post in posts %}

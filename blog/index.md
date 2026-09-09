@@ -3,7 +3,6 @@ layout: default
 title: Blog
 ---
 <section>
-  <p class="eyebrow">Writing</p>
   <h1>Blog</h1>
   <p><a href="{{ '/blog/ja/' | relative_url }}">日本語</a> · <a href="{{ '/blog/en/' | relative_url }}">English</a></p>
   <ul class="post-list">

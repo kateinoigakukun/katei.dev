@@ -9,21 +9,21 @@ permalink: /blog/2025/09/20/214804/
 
 <p>Swift 6.2 のリリースで、公式に WebAssembly ターゲットをサポートしました。</p>
 
-<p><a href="https://www.swift.org/blog/swift-6.2-released/#webassembly-support">https://www.swift.org/blog/swift-6.2-released/#webassembly-support</a></p>
+<p><a href="https://www.swift.org/blog/swift-6.2-released/#webassembly-support" target="_blank" rel="noopener noreferrer">https://www.swift.org/blog/swift-6.2-released/#webassembly-support</a></p>
 
-<p><blockquote data-conversation="none" class="twitter-tweet" data-lang="en"><p lang="en" dir="ltr">With ✨Swift 6.2 ✨, you can now target WebAssembly, including WASI support. Get started here: <a href="https://t.co/iNMnNgto6D">https://t.co/iNMnNgto6D</a> <a href="https://twitter.com/hashtag/Wasm?src=hash&amp;ref_src=twsrc%5Etfw">#Wasm</a> <a href="https://t.co/2oIdeXBtQA">pic.twitter.com/2oIdeXBtQA</a></p>&mdash; Swift Language (@SwiftLang) <a href="https://twitter.com/SwiftLang/status/1968398412329730180?ref_src=twsrc%5Etfw">September 17, 2025</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>  </p>
+<p><blockquote data-conversation="none" class="twitter-tweet" data-lang="en"><p lang="en" dir="ltr">With ✨Swift 6.2 ✨, you can now target WebAssembly, including WASI support. Get started here: <a href="https://t.co/iNMnNgto6D" target="_blank" rel="noopener noreferrer">https://t.co/iNMnNgto6D</a> <a href="https://twitter.com/hashtag/Wasm?src=hash&amp;ref_src=twsrc%5Etfw" target="_blank" rel="noopener noreferrer">#Wasm</a> <a href="https://t.co/2oIdeXBtQA" target="_blank" rel="noopener noreferrer">pic.twitter.com/2oIdeXBtQA</a></p>&mdash; Swift Language (@SwiftLang) <a href="https://twitter.com/SwiftLang/status/1968398412329730180?ref_src=twsrc%5Etfw" target="_blank" rel="noopener noreferrer">September 17, 2025</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>  </p>
 
 <h2 id="61から何が変わったか">6.1から何が変わったか</h2>
 
-<p><a href="https://zenn.dev/katei/articles/swiftwasm-6-1-release">SwiftWasm 6.1のリリースを自慢したい</a> でも書いた通り、6.1 の時点で必要なパッチはすべてアップストリーム済みでした。ただし当時は WebAssembly 向けの Swift SDK を swiftwasm 側が配布していました。6.2 からはこれが swift.org から提供されます。基本的には「配布元が変わっただけ」で機能差はありません。</p>
+<p><a href="https://zenn.dev/katei/articles/swiftwasm-6-1-release" target="_blank" rel="noopener noreferrer">SwiftWasm 6.1のリリースを自慢したい</a> でも書いた通り、6.1 の時点で必要なパッチはすべてアップストリーム済みでした。ただし当時は WebAssembly 向けの Swift SDK を swiftwasm 側が配布していました。6.2 からはこれが swift.org から提供されます。基本的には「配布元が変わっただけ」で機能差はありません。</p>
 
 <p>とはいえこれは信用の話として効いてきます。これまでは Swift SDK がサードパーティからの配布だったため、いくつかのSwiftパッケージにWasm の CI チェックを入れる提案に渋い反応をもらうことがありました。今回公式化されたことで話が通りやすくなり、実際にいろんなパッケージで Wasm ビルドを CI に入れてもらえるようになりました。</p>
 
 <h2 id="WasmKit-が同梱">WasmKit が同梱</h2>
 
-<p>6.2 の OSS ツールチェイン（Xcode 同梱版ではなく swift.org で配布される方）には、僕がswiftwasm で引き継いで開発している WebAssembly ランタイム <a href="https://github.com/swiftwasm/WasmKit">WasmKit</a> も同梱されています。コンパイラツールチェインにWasmランタイムが同梱されているのはなかなか珍しいと思います。</p>
+<p>6.2 の OSS ツールチェイン（Xcode 同梱版ではなく swift.org で配布される方）には、僕がswiftwasm で引き継いで開発している WebAssembly ランタイム <a href="https://github.com/swiftwasm/WasmKit" target="_blank" rel="noopener noreferrer">WasmKit</a> も同梱されています。コンパイラツールチェインにWasmランタイムが同梱されているのはなかなか珍しいと思います。</p>
 
 <h2 id="おわりに">おわりに</h2>
 
 <p>公式ドキュメントに step-by-step のガイドがあるので試してみてください。
-<a href="https://www.swift.org/documentation/articles/wasm-getting-started.html">https://www.swift.org/documentation/articles/wasm-getting-started.html</a></p>
+<a href="https://www.swift.org/documentation/articles/wasm-getting-started.html" target="_blank" rel="noopener noreferrer">https://www.swift.org/documentation/articles/wasm-getting-started.html</a></p>

@@ -7,13 +7,13 @@ source_url: https://kateinoigakukun.hatenablog.com/entry/2020/12/01/083949
 permalink: /blog/2020/12/01/083949/
 ---
 
-<p><a href="https://qiita.com/advent-calendar/2020/swift">Swift Advent Calendar 2020</a> の1日目の記事です。</p>
+<p><a href="https://qiita.com/advent-calendar/2020/swift" target="_blank" rel="noopener noreferrer">Swift Advent Calendar 2020</a> の1日目の記事です。</p>
 
 <p>今年の頭頃からGoogleのSwift for Tensorflowチームが主体となって、SwiftとC++の相互運用機能の議論と実装が進んでいます。</p>
 
 <p>まだ未実装な部分も多く今すぐに試せるわけではありませんが、マニフェストの内容や現在の実装状況から興味深い部分をピックアップして紹介したいと思います。</p>
 
-<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fapple%2Fswift%2Fblob%2Fmain%2Fdocs%2FCppInteroperabilityManifesto.md" title="apple/swift" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/apple/swift/blob/main/docs/CppInteroperabilityManifesto.md">github.com</a></cite></p>
+<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fapple%2Fswift%2Fblob%2Fmain%2Fdocs%2FCppInteroperabilityManifesto.md" title="apple/swift" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/apple/swift/blob/main/docs/CppInteroperabilityManifesto.md" target="_blank" rel="noopener noreferrer">github.com</a></cite></p>
 
 <h2>大まかな実装方針</h2>
 
@@ -27,13 +27,13 @@ permalink: /blog/2020/12/01/083949/
 
 <blockquote><p>Ideally, users working in Swift should not feel any difference between native Swift APIs and imported C++ APIs.</p></blockquote>
 
-<p><a href="https://github.com/apple/swift/blob/main/docs/CppInteroperabilityManifesto.md#goals">https://github.com/apple/swift/blob/main/docs/CppInteroperabilityManifesto.md#goals</a></p>
+<p><a href="https://github.com/apple/swift/blob/main/docs/CppInteroperabilityManifesto.md#goals" target="_blank" rel="noopener noreferrer">https://github.com/apple/swift/blob/main/docs/CppInteroperabilityManifesto.md#goals</a></p>
 
 <p>SwiftとC++からインポートされたAPIに違いを感じさせないような自然なやり取りを目指しているようです。</p>
 
-<p>また、Rustの<a href="https://github.com/rust-lang/rust-bindgen">rust-bindgen</a>のようなユーザーライブラリとして提供するのではなく、コンパイラに結合された形で提供する選択をすることで、エディタ連携やツーリングの面で滑らかな体験を実現したい、という意図が感じられます。</p>
+<p>また、Rustの<a href="https://github.com/rust-lang/rust-bindgen" target="_blank" rel="noopener noreferrer">rust-bindgen</a>のようなユーザーライブラリとして提供するのではなく、コンパイラに結合された形で提供する選択をすることで、エディタ連携やツーリングの面で滑らかな体験を実現したい、という意図が感じられます。</p>
 
-<p>さらに、"Interop must not be a burden for API vendors."と掲げており、<a href="https://ja.wikipedia.org/wiki/Java_Native_Interface">JNI</a>や<a href="https://github.com/google/clif">CLIF</a>のようなグルーレイヤーをできるだけ作らないことを目指しているようです。</p>
+<p>さらに、"Interop must not be a burden for API vendors."と掲げており、<a href="https://ja.wikipedia.org/wiki/Java_Native_Interface" target="_blank" rel="noopener noreferrer">JNI</a>や<a href="https://github.com/google/clif" target="_blank" rel="noopener noreferrer">CLIF</a>のようなグルーレイヤーをできるだけ作らないことを目指しているようです。</p>
 
 <h2>関数シグネチャの変換</h2>
 
@@ -83,7 +83,7 @@ void increment(int <span class="synIdentifier">*</span>value);
 
 <h2>ムーブセマンティクス</h2>
 
-<p>提案自体は長らく<a href="https://github.com/apple/swift/blob/main/docs/OwnershipManifesto.md">OwnershipManifest</a>にあるのですが、Swiftにはムーブセマンティクスが未だ実装されていません。そのため、RAIIパターンでよく使われるmove-onlyなC++の型を綺麗にSwiftの世界にマッピングできません。</p>
+<p>提案自体は長らく<a href="https://github.com/apple/swift/blob/main/docs/OwnershipManifesto.md" target="_blank" rel="noopener noreferrer">OwnershipManifest</a>にあるのですが、Swiftにはムーブセマンティクスが未だ実装されていません。そのため、RAIIパターンでよく使われるmove-onlyなC++の型を綺麗にSwiftの世界にマッピングできません。</p>
 
 <p>moveonly型がSwiftでサポートされるまでの対応として、UnsafePointerに特別な制約を課し、コピーできないようにしつつ、 <code>moveInitialize</code> メソッドでムーブする、という方法が挙げられています。</p>
 
@@ -164,7 +164,7 @@ moveonly <span class="synPreProc">struct</span> <span class="synType">File</span
 
 <p>例えば、C++のclassは継承をサポートしていますが、Swiftのstructは継承ができず値型同士のサブタイプ関係は存在しません。そのため、C++のclass型を値レベルで自然にキャストすることはできません。</p>
 
-<p>しかし、そもそも値型同士のサブタイプ関係には<a href="https://en.wikipedia.org/wiki/Object_slicing">Object slicing</a>の問題があり、ミスが起こりやすいとされています。そのため、安全な操作でないことを示すためにUnsafePointer経由で表現することになりそうです。</p>
+<p>しかし、そもそも値型同士のサブタイプ関係には<a href="https://en.wikipedia.org/wiki/Object_slicing" target="_blank" rel="noopener noreferrer">Object slicing</a>の問題があり、ミスが起こりやすいとされています。そのため、安全な操作でないことを示すためにUnsafePointer経由で表現することになりそうです。</p>
 
 <pre class="code lang-swift" data-lang="swift" data-unlink><span class="synComment">// C++ header.</span>
 <span class="synPreProc">class</span> <span class="synType">Base</span> {
@@ -301,7 +301,7 @@ void functionTemplate(T t) { <span class="synIdentifier">...</span> }
 
 <p>そこで提案されているのが <code>throws!</code> というキーワードをSwift側に追加するプランです。 <code>throws!</code> はdo-catchで例外をキャッチすることも可能だが、キャッチしないことも可能、を示します。例外が投げられたがキャッチされなかった場合、プログラムは終了するようです。</p>
 
-<p><a href="https://forums.swift.org/t/handling-c-exceptions/34823">これについては現在Pitchが出ています。</a></p>
+<p><a href="https://forums.swift.org/t/handling-c-exceptions/34823" target="_blank" rel="noopener noreferrer">これについては現在Pitchが出ています。</a></p>
 
 <h2>標準ライブラリ型のブリッジ</h2>
 
@@ -313,4 +313,4 @@ void functionTemplate(T t) { <span class="synIdentifier">...</span> }
 
 <p>Interoperabilityの仕様には細かい決めの問題が大量にあって言語デザインのセンスが問われそうだなと思いました。</p>
 
-<p>今回紹介した機能は実装が予定されている機能の一部だけなので、興味がある方は実装や<a href="https://github.com/apple/swift/blob/main/docs/CppInteroperabilityManifesto.md">Manifest</a>を見ると面白いと思います。</p>
+<p>今回紹介した機能は実装が予定されている機能の一部だけなので、興味がある方は実装や<a href="https://github.com/apple/swift/blob/main/docs/CppInteroperabilityManifesto.md" target="_blank" rel="noopener noreferrer">Manifest</a>を見ると面白いと思います。</p>

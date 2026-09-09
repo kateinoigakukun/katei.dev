@@ -6,6 +6,12 @@ lang: en
 timezone: Asia/Tokyo
 markdown: kramdown
 theme: minima
+github_username: kateinoigakukun
+twitter_username: kateinoigakukun
+linkedin_username: kateinoigakukun
+mastodon:
+  - username: katei
+    instance: ruby.social
 collections:
   external_posts:
     output: false
