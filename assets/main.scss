@@ -1,0 +1,23 @@
+---
+---
+
+@import "minima";
+
+@media screen and (max-width: 600px) {
+  .site-nav {
+    position: static;
+    background-color: transparent;
+    border: 0;
+    text-align: right;
+  }
+
+  .site-nav .trigger {
+    display: block;
+  }
+
+  .site-nav .page-link {
+    display: inline;
+    margin-left: 20px;
+    padding: 5px 0;
+  }
+}
