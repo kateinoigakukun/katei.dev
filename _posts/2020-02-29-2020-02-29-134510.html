@@ -1,0 +1,169 @@
+---
+layout: post
+title: "WebAssembly向けのデバッガを開発しました"
+date: 2020-02-29 13:45:10 +0900
+language: ja
+source_url: https://kateinoigakukun.hatenablog.com/entry/2020/02/29/134510
+permalink: /blog/2020/02/29/134510/
+---
+
+<p>こんにちは。私はSwift言語のWebAssembly向けコンパイルをサポートするプロジェクトを進めている一人です。</p>
+
+<p>その開発を効率的に進めていくためにWebAssembly向けのデバッガ<a href="https://github.com/kateinoigakukun/wasminspect">wasminspect</a>を開発しました。</p>
+
+<h2>Swift for WebAssemblyの進捗</h2>
+
+<p>この間フォーラムに詳しい進捗報告をしました。
+概要としては</p>
+
+<ul>
+<li>約90%のテストケースが通るようになった</li>
+<li>まだ一部の実行時の言語仕様が動かない
+
+<ul>
+<li>実行時キャストなど</li>
+</ul>
+</li>
+</ul>
+
+
+<p>という感じです。</p>
+
+<p><blockquote class="twitter-tweet" data-lang="ja"><p lang="en" dir="ltr">Our co-maintainer <a href="https://twitter.com/kateinoigakukun?ref_src=twsrc%5Etfw">@kateinoigakukun</a> has posted a detailed update on the current status of SwiftWasm and remaining issues that are being worked on or require contributions from the community (please do get involved!):<a href="https://t.co/LHMAXy3hwv">https://t.co/LHMAXy3hwv</a></p>&mdash; SwiftWasm (@swiftwasm) <a href="https://twitter.com/swiftwasm/status/1229775798611120128?ref_src=twsrc%5Etfw">2020年2月18日</a></blockquote><script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script></p>
+
+<p>これをデバッグする必要が出てきたこと、既存のデバッグ手法では太刀打ちできないことから今回のデバッガを開発することにしました。</p>
+
+<h2>既存のデバッグ手法</h2>
+
+<p>既存のデバッグ手法としては以下のようなものが挙げられます。</p>
+
+<ol>
+<li>WebAssembly以外のアーキテクチャでデバッグ</li>
+<li>printデバッグ</li>
+<li>Chrome DevTools</li>
+<li>LLDB + wasmtime</li>
+</ol>
+
+
+<h3>WebAssembly以外のアーキテクチャでデバッグ</h3>
+
+<p>大抵の場合、自分が元の言語で書いたロジックが間違っているので、わざわざWebAssembly向けバイナリでデバッグする必要はありません。RustでWebAssembly開発をしている場合でもRustをx86_64向けにコンパイルしてLLDBでデバッグすればよいのです。</p>
+
+<p>これは手慣れた手法でデバッグでき、LLDBやGDBなどデバッグする環境が十分に整っていることが大きなメリットです。</p>
+
+<p>一方、実際に動かすバイナリをデバッグできるわけではないので、コンパイラが吐くコードが信用できないときには使えません。あくまでデバッグできるのは手元のマシンのアーキテクチャ向けに吐かれたバイナリであり、WebAssemblyバイナリではありません。今回はWebAssembly向けコンパイルのパイプラインをデバッグしたかったため、この手法は不採用でした。</p>
+
+<h3>printデバッグ</h3>
+
+<p>古典的なデバッグ手法ですが、デバッガが無い環境では非常に有用な手法です。printデバッグの最大のメリットはWebAssemblyバイナリ自体をデバッグできることです。</p>
+
+<p>しかし、printのためのコードが入り込むため、結局デバッグ対象のバイナリ自身をデバッグできるわけではないです。デバッグ用のコードを入れたらスタックが破壊される、ということがザラに起きるのでこれは致命的です。</p>
+
+<p>また、あくまで中間状態をロギングできるだけなので、プロセスの制御ができません。例えばブレークポイントを貼って任意のタイミングでプロセスを止めたり、ステップ実行しながら条件分岐の進み方を確認することはできません。</p>
+
+<h3>Chrome DevTools</h3>
+
+<p>最新のChromeではDevToolsのWebAssembly対応が進んできています。最近はDWARFの解釈もできるようになったようです。実際にブラウザ上でデバッグできるのは非常に大きなメリットです。また将来的にWebAssemblyをWeb開発で普及させていくためには必須の機能だと思います。</p>
+
+<p>ただ、現状フレーム上の変数やメモリ空間をダンプできなかったり、機能不足感が否めないです。</p>
+
+<p>OSSとして開発されているので開発に参加することも考えましたが、プロジェクトが非常に大きいこと、v8とのインテグレーション作業に時間がかかりそうなことから、見送りました。</p>
+
+<p><blockquote class="twitter-tweet" data-lang="ja"><p lang="en" dir="ltr">Initial DWARF support has landed in Chrome DevTools!<br><br>It means that you can resolve stack traces, set breakpoints and step-in/-over source code in C/C++/Rust natively, without generating source maps. <a href="https://t.co/s3IwkJV6Tr">pic.twitter.com/s3IwkJV6Tr</a></p>&mdash; Chrome DevTools (@ChromeDevTools) <a href="https://twitter.com/ChromeDevTools/status/1192803818024710145?ref_src=twsrc%5Etfw">2019年11月8日</a></blockquote><script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script></p>
+
+<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fdevelopers.google.com%2Fweb%2Fupdates%2F2019%2F12%2Fwebassembly%23background" title="Improved WebAssembly debugging in Chrome DevTools  |  Google Developers" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://developers.google.com/web/updates/2019/12/webassembly#background">developers.google.com</a></cite></p>
+
+<h3>LLDB + wasmtime</h3>
+
+<p>wasmtimeはMozillaが開発しているWebAssemblyのJITコンパイラです。</p>
+
+<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fbytecodealliance%2Fwasmtime%2F" title="bytecodealliance/wasmtime" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/bytecodealliance/wasmtime/">github.com</a></cite></p>
+
+<p>LLDBやGDBにはJITコンパイルされたネイティブコードとデバッグ情報からデバッグする機能があります。</p>
+
+<p><a href="https://llvm.org/docs/DebuggingJITedCode.html">Debugging JIT-ed Code With GDB &mdash; LLVM 10 documentation</a></p>
+
+<p>wasmtimeはWASMに埋め込まれたDWARFをJITコンパイル後のアーキテクチャ向けに変換して、LLDBと通信することでソースレベルデバッグを実現しています。</p>
+
+<p>実際に自分でデバッガを作り始めるまではこの手法でデバッグしていました。
+ソースレベルのステップ実行やフレームの変数ダンプなどはそこそこ動いていました。
+何よりもLLDBの基盤に乗ることで、既存のデバッガ資産をそのまま使えるというのが大きいです。</p>
+
+<p>しかし、この手法でデバッグできるのはあくまでJITコンパイルされたネイティブコードであり、WebAssemblyではありません。なのでWebAssembly命令レベルでのステップ実行などはできないです。また、WebAssemblyをネイティブコードに変換する際に一部の情報が落ちてしまう問題もありました。</p>
+
+<p>例えばWebAssemblyには関数呼び出し時にシグネチャの一致をチェックして、一致しない場合trapする仕様があります。デバッグの必要がない場合、不一致の時abortするだけで十分ですが、デバッグ時には実際にどの型を比較したのか、などの追加の情報が欲しいです。これを実現するためにはデバッグ時のみネイティブコードにデバッグ情報を乗せる、などの作業が必要になります。しかし、それぞれの例外をハンドリングするためにデバッグ情報を伝播するのは非常に大変でした。</p>
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/PevI_Mn-UUE" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+
+<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fhacks.mozilla.org%2F2019%2F09%2Fdebugging-webassembly-outside-of-the-browser%2F" title="Debugging WebAssembly Outside of the Browser – Mozilla Hacks - the Web developer blog" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://hacks.mozilla.org/2019/09/debugging-webassembly-outside-of-the-browser/">hacks.mozilla.org</a></cite></p>
+
+<h2>本当に欲しかったデバッガの要件</h2>
+
+<p>コンパイラ開発において本当に欲しかったデバッガの要件は以下のとおりです。</p>
+
+<ul>
+<li>実行時にどのwasm命令を実行しているか把握できる</li>
+<li>プロセスの制御ができる</li>
+<li>メモリダンプ</li>
+<li>DWARFを解釈できる
+
+<ul>
+<li>命令とソースコードの対応</li>
+<li>変数のダンプ</li>
+</ul>
+</li>
+</ul>
+
+
+<p>しかしこれを満たすようなデバッガが見つからなかったため、自作する結論に至りました。</p>
+
+<h2>wasminspect</h2>
+
+<p><a href="https://raw.githubusercontent.com/kateinoigakukun/wasminspect/master/assets/demo.gif" class="http-image"><img src="https://raw.githubusercontent.com/kateinoigakukun/wasminspect/master/assets/demo.gif" class="http-image" alt="https://raw.githubusercontent.com/kateinoigakukun/wasminspect/master/assets/demo.gif"></a></p>
+
+<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fkateinoigakukun%2Fwasminspect" title="kateinoigakukun/wasminspect" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/kateinoigakukun/wasminspect">github.com</a></cite></p>
+
+<p>GIFでだいたいの雰囲気は伝わると思います。</p>
+
+<p>冬休みの一週間強でデバッガ用のWebAssemblyランタイムを書いて、春休みの最初の一週間でデバッガフロントエンドを書いて、やっとまともに使えるようになりました。今ではバリバリコンパイラ開発で活躍しています。</p>
+
+<h3>実装</h3>
+
+<p>基本的にLLDBのコードを参考にしながら実装しました。大きな違いはLLDBがOSのシステムコールを使ってプロセスを制御するのに対して、wasminspectでは内蔵したランタイムを直接制御する部分です。</p>
+
+<p>ランタイムはJITコンパイルもAOTコンパイルもせず、愚直にインタプリタとして実装しました。これはWebAssembly命令レベルでのステップ実行を実現するためです。また、wasmtimeとLLDBの組み合わせのときに発生したデバッグ情報の伝播も必要なくなりました。</p>
+
+<p>ランタイムの開発は公式の<a href="https://webassembly.github.io/spec/core/index.html">ドキュメント</a>や<a href="https://github.com/webassembly/spec">テストケース</a>が充実していて非常にスムーズに進みました。</p>
+
+<h3>DWARF for WebAssembly</h3>
+
+<p>正直DWARF対応だけで何本かブログが書けそうなくらいしんどかったです。基本的に仕様を読みながらLLDBのコードを参考にして実装するだけでしたが、単純に量が多かったです。</p>
+
+<p><iframe src="https://hatenablog-parts.com/embed?url=http%3A%2F%2Fdwarfstd.org%2FDownload.php" title="Download DWARF Standards" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="http://dwarfstd.org/Download.php">dwarfstd.org</a></cite></p>
+
+<p>WebAssemblyに固有の話としてはDWARF上のスタックとLLVMが吐くWebAssemblyのスタックが一致しない、ということがありました。
+LLVMが吐くWebAssemblyでは線形メモリ上に擬似スタックのような空間を確保してそこを伸び縮みさせてフレーム変数を管理しています。（WebAssemblyの仕様で定義されているスタックとは別）
+<code>rsp</code>に対応する値がグローバルに保持されていて、x86_64向けの命令のようにプロローグとエピローグが擬似スタック上で実行されます。</p>
+
+<p>DWARFが示すスタックはこの擬似スタックにほぼ対応しているので、LLVMの実装に依存することでローカル変数のダンプができるようになりました。</p>
+
+<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fllvm%2Fllvm-project%2Fblob%2F23db9724d0e5490fa5a2a726acf015f84e2c87cf%2Fllvm%2Flib%2FTarget%2FWebAssembly%2FWebAssemblyFrameLowering.cpp%23L153-L224" title="llvm/llvm-project" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/llvm/llvm-project/blob/23db9724d0e5490fa5a2a726acf015f84e2c87cf/llvm/lib/Target/WebAssembly/WebAssemblyFrameLowering.cpp#L153-L224">github.com</a></cite></p>
+
+<p>将来的にはWebAssembly向けの位置情報がDWARFの仕様に追加されるんじゃないかなぁと予想しています。既にドラフトの文書があったりします。</p>
+
+<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fyurydelendik.github.io%2Fwebassembly-dwarf%2F%23DWARF-expressions-and-location-descriptions" title="DWARF for WebAssembly" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://yurydelendik.github.io/webassembly-dwarf/#DWARF-expressions-and-location-descriptions">yurydelendik.github.io</a></cite></p>
+
+<h2>自作デバッガの功績</h2>
+
+<p>今回作ったデバッガは既にいくつかのSwiftのバグを修正するのに大きく貢献しています。特にメモリダンプ機能は非常に便利で、正常に動くx86_64向けバイナリと比較することで破壊されたメモリの位置を特定できます。</p>
+
+<p><blockquote class="twitter-tweet" data-lang="ja"><p lang="ja" dir="ltr">僕もメモリダンプとにらめっこしてる <a href="https://t.co/lwLBWK2rkT">pic.twitter.com/lwLBWK2rkT</a></p>&mdash; kateinoigakukun (@kateinoigakukun) <a href="https://twitter.com/kateinoigakukun/status/1230852066702049282?ref_src=twsrc%5Etfw">2020年2月21日</a></blockquote><script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script></p>
+
+<h2>まとめ</h2>
+
+<p>一応一通り動くデバッガができましたが、基本的に僕自身がSwift for WASMの開発をするための道具として開発しているだけなので、あまり他の環境で使われることを考慮していません。試していないですが、多分EmscriptenではDWARFの解釈がうまく行かないと思います。</p>
+
+<p><a href="https://github.com/kateinoigakukun/wasminspect/blob/master/docs/tutorial.md">ドキュメント</a>を軽く書いたのでもし興味があれば触ってみてください。</p>
+
+<p>0からデバッガを作る機会はなかなか無いので楽しかったです。これからも「無いなら作ればいい」の精神でやっていきたいと思います。</p>

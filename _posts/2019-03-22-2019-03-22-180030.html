@@ -1,0 +1,400 @@
+---
+layout: post
+title: "Swift Type Metadata (ja)"
+date: 2019-03-22 18:00:30 +0900
+language: ja
+source_url: https://kateinoigakukun.hatenablog.com/entry/2019/03/22/180030
+permalink: /blog/2019/03/22/180030/
+---
+
+<script async class="speakerdeck-embed" data-id="c969176dbb024e69abc7535bebaf43e4" data-ratio="1.77777777777778" src="//speakerdeck.com/assets/embed.js"></script>
+
+
+<p><iframe width="480" height="270" src="https://www.youtube.com/embed/2fon4YFI9Ao?feature=oembed" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe><cite class="hatena-citation"><a href="https://www.youtube.com/watch?v=2fon4YFI9Ao">www.youtube.com</a></cite></p>
+
+<p>try! Swift 2019</p>
+
+<p>kateinoigakukunです。メルカリでインターンをしています。</p>
+
+<p><span itemscope itemtype="http://schema.org/Photograph"><a href="http://f.hatena.ne.jp/kateinoigaku/20190322173349" class="hatena-fotolife" itemprop="url"><img src="https://cdn-ak.f.st-hatena.com/images/fotolife/k/kateinoigaku/20190322/20190322173349.jpg" alt="f:id:kateinoigaku:20190322173349j:image" title="f:id:kateinoigaku:20190322173349j:image" class="hatena-fotolife" itemprop="image"></a></span></p>
+
+<p>今日はSwiftを理解するために重要なメタデータについて話します。Swiftは静的型付けな言語として知られていますが、
+実はランタイムにおいては動的な部分が多々あるのです。</p>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">let</span> <span class="synIdentifier">typeName</span> <span class="synIdentifier">=</span> String(describing<span class="synSpecial">:</span> <span class="synType">Int.self</span>)
+</pre>
+
+
+<p>皆さんもStackOverflowを見て、一度はこんなコードを書いて型名を取得したことがあるでしょう。</p>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">extension</span> <span class="synType">UITableView</span> {
+    <span class="synPreProc">func</span> <span class="synIdentifier">register</span><span class="synSpecial">&lt;Cell&gt;</span>(nibWithCellClass<span class="synSpecial">:</span> <span class="synType">Cell.Type</span>) <span class="synStatement">where</span> Cell<span class="synSpecial">:</span> <span class="synType">UITableViewCell</span> {
+        <span class="synPreProc">let</span> <span class="synIdentifier">typeName</span> <span class="synIdentifier">=</span> String(describing<span class="synSpecial">:</span> <span class="synType">Cell.self</span>)
+        <span class="synPreProc">let</span> <span class="synIdentifier">nib</span> <span class="synIdentifier">=</span> UINib(nibName<span class="synSpecial">:</span> <span class="synType">typeName</span>, bundle<span class="synSpecial">:</span> <span class="synType">Bundle.main</span>)
+        register(nib, forCellReuseIdentifier<span class="synSpecial">:</span> <span class="synType">typeName</span>)
+    }
+}
+
+tableView.register(nibWithCellClass<span class="synSpecial">:</span> <span class="synType">TweetCell.self</span>)
+</pre>
+
+
+<p>例えば<code>UITableViewCell</code>をregisterするとき、Xibのファイル名をクラス名と合わせるために使っていると思います。よくあるextensionですね。一方で、この一行がランタイムでどのように動いているか考えたことはありますか？これを機にSwiftのランタイムのメモリ表現を考えてみませんか？ メタデータの世界に飛び込んでみましょう！</p>
+
+<h2>Agenda</h2>
+
+<ol>
+<li>What is type metadata?</li>
+<li>Explore <code>String(describing: Int.self)</code></li>
+<li>How to use metadata in Swift</li>
+<li>Use cases in OSS</li>
+</ol>
+
+
+<p>まず、そもそもメタデータとはなにか、について話します。メタデータは我々がアプリを開発する上であまり馴染みが無いかもしれません。しかし、アプリを作っている時でさえ、Swiftのコア機能は動的な動作のために内部的にメタデータを使っており、実はいつも恩恵を受けているのです。前のスライドで出した例を紐解きながら、Swiftが内部でどのようにメタデータを使っているかを解説します。そして、Swiftでどのようにメタデータを使うか、それを使ったハックを紹介します。</p>
+
+<h2>What is type metadata?</h2>
+
+<ul>
+<li>Type information in Swift runtime</li>
+<li>Used in Swift internal dynamic behavior</li>
+<li>Metatype is pointer to metadata</li>
+</ul>
+
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">let</span> <span class="synIdentifier">metatype</span><span class="synSpecial">:</span> <span class="synType">Int.Type</span> <span class="synIdentifier">=</span> Int.<span class="synIdentifier">self</span>
+</pre>
+
+
+<p>メタデータは型についてのSwiftの内部情報です。例えばインスタンスのサイズや、enumのcase数などが含まれています。これらの情報はバイナリ上に静的に格納されていたり、ランタイムで動的に生成される場合もあります。Swift上では型名に<code>self</code>を付けて表現されるメタタイプがメタデータへのポインタとなっています。</p>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">extension</span> <span class="synType">String</span> {
+
+  <span class="synPreProc">public</span> <span class="synIdentifier">init</span><span class="synSpecial">&lt;Subject: CustomStringConvertible&gt;</span>(describing instance<span class="synSpecial">:</span> <span class="synType">Subject</span>) { <span class="synIdentifier">...</span> }
+
+  <span class="synPreProc">public</span> <span class="synIdentifier">init</span><span class="synSpecial">&lt;Subject&gt;</span>(describing instance<span class="synSpecial">:</span> <span class="synType">Subject</span>) { <span class="synIdentifier">...</span> }
+
+}
+
+<span class="synPreProc">let</span> <span class="synIdentifier">typeName</span> <span class="synIdentifier">=</span> String(describing<span class="synSpecial">:</span> <span class="synType">Int.self</span>) <span class="synComment">// &quot;Int&quot;</span>
+</pre>
+
+
+<p>前述したように、 <code>Int.self</code>はメタタイプのオブジェクトであり、そのメタタイプは<code>String</code>のイニシャライザに渡されます。 このイニシャライザは任意の型の値を受け付けます。渡されてきた値の型が <code>CustomStringConvertible</code>に準拠している場合は<code>description</code>プロパティをそのまま返しますが、メタタイプが渡された場合は型名を返す、という挙動になっています。</p>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">extension</span> <span class="synType">Int.Type</span><span class="synSpecial">:</span> <span class="synType">CustomStringConvertible</span> { <span class="synComment">// 🚫 Cannot extend a metatype 'Int.Type'</span>
+    <span class="synPreProc">var</span> <span class="synIdentifier">description</span><span class="synSpecial">:</span> <span class="synType">String</span> {
+        <span class="synStatement">return</span> <span class="synConstant">&quot;Int&quot;</span>
+    }
+}
+</pre>
+
+
+<p>Swiftではメタタイプは拡張できないので、<code>CustomStringConvertible</code>の<code>description</code>プロパティが実装されているはずがありません。そのため、純粋なSwiftのAPIで実装するのは不可能だと思われます。SwiftにはObjective-CのようなランタイムAPIが無いからです。つまり、どこかに魔法があるはずです。</p>
+
+<h3>SwiftCore</h3>
+
+<ul>
+<li>Swift standard library</li>
+<li>Fundamental types and interfaces</li>
+</ul>
+
+
+<h3>SwiftRuntime</h3>
+
+<ul>
+<li>Swift runtime library</li>
+<li>Dynamic behavior</li>
+</ul>
+
+
+<p>このイニシャライザは<code>SwiftCore</code>で実装されており、魔法は<code>SwiftRuntime</code>に実装されています。<code>SwiftCore</code>には、Swiftで使われる<code>String</code>や<code>Int</code>などの基本的なデータ型と<code>Sequence</code>や<code>Numeric</code>などのプロトコルが実装されています。 また、<code>SwiftRuntime</code>はSwiftのC++で書かれたランタイムライブラリでランタイムの振る舞いが実装されています。ダイナミックなキャストやインスタンスのアロケーションのような多くの動的な言語機能はこのライブラリに実装されています。</p>
+
+<h3>stdlib/public/core/Mirror.swift</h3>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">struct</span> <span class="synType">String</span> {
+  <span class="synPreProc">public</span> <span class="synIdentifier">init</span><span class="synSpecial">&lt;Subject&gt;</span>(describing instance<span class="synSpecial">:</span> <span class="synType">Subject</span>) {
+    _print_unlocked(instance, <span class="synIdentifier">&amp;self</span>)
+  }
+}
+</pre>
+
+
+<p>Swiftの実装はオープンソースになっているので、Githubからいつでも見ることが出来ます。このイニシャライザの内部では<code>print_unlocked</code>関数が呼ばれます。</p>
+
+<h3>stdlib/public/core/Misc.swift</h3>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">public</span> <span class="synPreProc">func</span> <span class="synIdentifier">_typeName</span>(_ type<span class="synSpecial">:</span> <span class="synType">Any.Type</span>, qualified<span class="synSpecial">:</span> <span class="synType">Bool</span> <span class="synIdentifier">=</span> <span class="synConstant">true</span>) <span class="synSpecial">-&gt;</span> <span class="synType">String</span> {
+  <span class="synPreProc">let</span> (stringPtr, count) <span class="synIdentifier">=</span> _getTypeName(type, qualified<span class="synSpecial">:</span> <span class="synType">qualified</span>)
+  <span class="synStatement">return</span> String._fromUTF8Repairing(
+    UnsafeBufferPointer(start<span class="synSpecial">:</span> <span class="synType">stringPtr</span>, count<span class="synSpecial">:</span> <span class="synType">count</span>)).<span class="synConstant">0</span>
+}
+
+<span class="synType">@_silgen_name</span>(<span class="synConstant">&quot;swift_getTypeName&quot;</span>)
+<span class="synPreProc">public</span> <span class="synPreProc">func</span> <span class="synIdentifier">_getTypeName</span>(_ type<span class="synSpecial">:</span> <span class="synType">Any.Type</span>, qualified<span class="synSpecial">:</span> <span class="synType">Bool</span>) <span class="synSpecial">-&gt;</span> (UnsafePointer<span class="synIdentifier">&lt;</span>UInt8<span class="synIdentifier">&gt;</span>, Int)
+</pre>
+
+
+<p>引数の型がメタ型である場合の呼び出しスタックを掘り下げていくと、<code>typeName</code>関数がメタ型を引数として呼び出されています。そして、また別の関数<code>_getTypeName</code>がさらに呼ばれます。
+<code>_getTypeName</code>の定義を見てみましょう。
+まず、 <code>@ _silgen_name</code>属性が追加されていること、関数の実装がないことに気がつくと思います。これは何でしょう？この<code>@_silgen_name</code>アトリビュートは、リンク時に付けられる関数の名前を指定します。 今回の場合、このシグネチャーは <code>SwiftRuntime</code>の関数にリンクするために使われます。リンクされた関数の実装については省略しますが、単純にメタデータに含まれている型名を取り出すだけです。
+では、メタデータはメモリ上でどのように表現されるでしょうか？</p>
+
+<p><span itemscope itemtype="http://schema.org/Photograph"><a href="http://f.hatena.ne.jp/kateinoigaku/20190322173606" class="hatena-fotolife" itemprop="url"><img src="https://cdn-ak.f.st-hatena.com/images/fotolife/k/kateinoigaku/20190322/20190322173606.jpg" alt="f:id:kateinoigaku:20190322173606j:image" title="f:id:kateinoigaku:20190322173606j:image" class="hatena-fotolife" itemprop="image"></a></span></p>
+
+<p>図のようにメタデータは分割されて表現されます。
+- インスタンスを操作するための関数の集合である<code>ValueWitnessTable</code>
+- クラス、構造体、プロトコルなどの種類の種類を表す<code>kind value</code>
+- 型の詳細な情報を保持する<code>NominalTypeDescriptor</code>。
+- クラスの場合はVTableもメタデータに含まれています、
+- さらに、genericな型の場合、型パラメータも動的に埋め込まれます。</p>
+
+<p>NominalTypeDescriptorには、我々が今求めている型の名前が入っています。
+つまり、メタデータのアドレスを進めるだけで、<code>NominalTypeDescriptor</code>から型の名前を取得できるということです。 実装するのは難しく無さそうです。Swiftのコードでこの <code>SwiftRuntime</code>のStringのイニシャライザの実装を再現してみましょう！</p>
+
+<p>(docs/ABI/TypeMetadata.rst)</p>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">struct</span> <span class="synType">StructMetadata</span> {
+    <span class="synPreProc">let</span> <span class="synIdentifier">kind</span><span class="synSpecial">:</span> <span class="synType">Int</span>
+    <span class="synPreProc">let</span> <span class="synIdentifier">typeDescriptor</span><span class="synSpecial">:</span> <span class="synType">UnsafePointer</span><span class="synSpecial">&lt;StructTypeDescriptor&gt;</span>
+}
+
+<span class="synPreProc">struct</span> <span class="synType">StructTypeDescriptor</span> {
+    <span class="synPreProc">let</span> <span class="synIdentifier">flags</span><span class="synSpecial">:</span> <span class="synType">Int32</span>
+    <span class="synPreProc">let</span> <span class="synIdentifier">parent</span><span class="synSpecial">:</span> <span class="synType">Int32</span>
+    <span class="synPreProc">let</span> <span class="synIdentifier">name</span><span class="synSpecial">:</span> <span class="synType">RelativePointer</span><span class="synSpecial">&lt;CChar&gt;</span>
+}
+</pre>
+
+
+<p><span itemscope itemtype="http://schema.org/Photograph"><a href="http://f.hatena.ne.jp/kateinoigaku/20190322173737" class="hatena-fotolife" itemprop="url"><img src="https://cdn-ak.f.st-hatena.com/images/fotolife/k/kateinoigaku/20190322/20190322173737.jpg" alt="f:id:kateinoigaku:20190322173737j:image" title="f:id:kateinoigaku:20190322173737j:image" class="hatena-fotolife" itemprop="image"></a></span></p>
+
+<p>まず最初にランタイムのメモリレイアウトをSwiftのstructとして再現します。メモリレイアウトに関する情報はほとんどドキュメントに書かれていますが、一部は古くなっているため、時々Swiftコンパイラーのソースコードを直接読まなくてはいけません。簡単のため、今回はstructについてのみ実装します。
+ここで<code>RelativePointer</code>というポインタの型が登場します。</p>
+
+<p>(include/swift/Basic/RelativePointer.h)</p>
+
+<p><code>RelativePointer</code>はただのポインターではありません。通常のポインターが参照先へのアドレスを持っているのに対し、<code>RelativePointer</code>は自身のアドレスから参照先のアドレスへのオフセットを保持しています。参照するときはオフセット分アドレスを進めるだけです。absolute addressの代わりにrelative addressを使うことで無駄なアドレスの再配置を減らせます。</p>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">func</span> <span class="synIdentifier">getTypeName</span><span class="synSpecial">&lt;Subject&gt;</span>(of type<span class="synSpecial">:</span> <span class="synType">Subject.Type</span>) <span class="synSpecial">-&gt;</span> <span class="synType">String</span> {
+    <span class="synPreProc">let</span> <span class="synIdentifier">metadataPointer</span> <span class="synIdentifier">=</span> unsafeBitCast(
+        type, to<span class="synSpecial">:</span> <span class="synType">UnsafePointer</span><span class="synSpecial">&lt;StructTypeMetadata&gt;</span>.<span class="synIdentifier">self</span>
+    )
+    <span class="synPreProc">let</span> <span class="synIdentifier">namePointer</span><span class="synSpecial">:</span> <span class="synType">UnsafePointer</span><span class="synSpecial">&lt;CChar&gt;</span> <span class="synIdentifier">=</span> metadataPointer.pointee
+                        .typeDescriptor.pointee
+                        .name.advancedPointer()
+    <span class="synStatement">return</span> String(cString<span class="synSpecial">:</span> <span class="synType">namePointer</span>)
+}
+</pre>
+
+
+<p>下準備が出来たので実際に型名を取り出してみましょう。まず、引数から渡ってきたメタタイプをメタデータのポインタにキャストします。ここではSwift上のサブタイピング関係が無いため<code>unsafeBitCast</code>を使います。取り出したメタデータからtype descriptorを経由してnameのrelative pointerにアクセスし、relative pointerからabsolute pointerに変換すると<code>CChar</code>のポインターになります。これをSwiftのString型に変換してreturnします。
+これで実装は完了しました。</p>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">let</span> <span class="synIdentifier">typeName</span> <span class="synIdentifier">=</span> getTypeName(of<span class="synSpecial">:</span> <span class="synType">Int.self</span>) <span class="synComment">// &quot;Int&quot;</span>
+</pre>
+
+
+<p>これを動かすと、無事に型名を取得できます。メタプログラミングの第一歩目ですね！</p>
+
+<h2>Use cases inside of Swift</h2>
+
+<ul>
+<li>Allocate instance
+
+<ul>
+<li>Value Witness Table</li>
+</ul>
+</li>
+<li>Dynamic method dispatch
+
+<ul>
+<li>VTable</li>
+</ul>
+</li>
+<li>Reflection
+
+<ul>
+<li>Mirror API</li>
+</ul>
+</li>
+</ul>
+
+
+<p>メタデータはSwiftの動的な振る舞いのためによく使われます。 皆さんはメタデータを使っていることを意識せずにSwiftを書いていますが、Swiftには多くのユースケースがあります。 それはどこでしょう？ 最も一般的なユースケースは、インスタンスをアロケートすることです。さらに、<code>protocol</code>や<code>class</code>を介してメソッドを呼び出すと、メタデータに格納されている関数テーブルが参照され、呼び出したいメソッドの参照が取得されます。
+他の例としては、プロパティのリフレクションのためにメタデータを使っている<code>Mirror</code>APIが挙げれられます。</p>
+
+<p>このように便利に使われているメタデータですが、人間はずる賢いので他の使い道を思いついてしまいます。</p>
+
+<h2>Method swizzling</h2>
+
+<p>ここからは皆さんがObjective-Cのころ使っていたあの黒魔術をSwiftで再現してみましょう。そうです、Method swizzlingです。メタデータを理解することで、大いなる力を手に入れることができるのです。</p>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">class</span> <span class="synType">Animal</span> {
+    <span class="synPreProc">func</span> <span class="synIdentifier">bar</span>() { print(<span class="synConstant">&quot;bar&quot;</span>) }
+    <span class="synPreProc">func</span> <span class="synIdentifier">foo</span>() { print(<span class="synConstant">&quot;foo&quot;</span>) }
+}
+
+<span class="synPreProc">struct</span> <span class="synType">ClassMetadata</span> {
+    <span class="synIdentifier">...</span>
+    <span class="synComment">// VTable</span>
+    <span class="synPreProc">var</span> <span class="synIdentifier">barRef</span><span class="synSpecial">:</span> <span class="synType">FunctionRef</span>
+    <span class="synPreProc">var</span> <span class="synIdentifier">fooRef</span><span class="synSpecial">:</span> <span class="synType">FunctionRef</span>
+}
+</pre>
+
+
+<p>型名を取得したときと同じ要領でメタデータのメモリレイアウトをstructで再現します。ClassのメソッドはVTableという関数ポインタのテーブルを通して呼び出されるため、そのポインタを書き換えれば実現できそうです。</p>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">let</span> <span class="synIdentifier">metadata</span> <span class="synIdentifier">=</span> unsafeBitCast(
+    Animal.<span class="synIdentifier">self</span>, to<span class="synSpecial">:</span> <span class="synType">UnsafeMutablePointer</span><span class="synSpecial">&lt;ClassMetadata&gt;</span>.<span class="synIdentifier">self</span>
+)
+
+<span class="synPreProc">let</span> <span class="synIdentifier">bar</span> <span class="synIdentifier">=</span> withUnsafeMutablePointer(to<span class="synSpecial">:</span> <span class="synIdentifier">&amp;</span>metadata.pointee.barRef) { <span class="synIdentifier">$0</span> }
+<span class="synPreProc">let</span> <span class="synIdentifier">foo</span> <span class="synIdentifier">=</span> withUnsafeMutablePointer(to<span class="synSpecial">:</span> <span class="synIdentifier">&amp;</span>metadata.pointee.fooRef) { <span class="synIdentifier">$0</span> }
+
+bar.pointee <span class="synIdentifier">=</span> foo.pointee
+
+<span class="synPreProc">let</span> <span class="synIdentifier">animal</span> <span class="synIdentifier">=</span> Animal()
+animal.bar() <span class="synComment">// foo</span>
+</pre>
+
+
+<p>メタデータのポインタをメタタイプから取り出して、そこからswizzleする関数のポインタをmutableなポインタとして取り出します。すると関数ポインタの値を入れ替えるのは簡単です。このコードは非常にシンプルですがきちんと動きます。
+このように、メタデータの情報によって我々は不可能なように見えるものでも実現できるのです。</p>
+
+<h2>Use cases</h2>
+
+<ul>
+<li>Zewo/Reflection</li>
+<li>wickwirew/Runtime</li>
+<li>alibaba/HandyJSON</li>
+<li>kateinoigakukun/StubKit</li>
+</ul>
+
+
+<p>私が見つけたメタデータを使っているOSSを紹介します。上の2つはメタデータの情報にアクセスするためのSwiftyなインターフェースを提供してくれるライブラリです。3つ目は、マッピングのための明示的な設定なしでJSONのエンコードとデコードができるJSONライブラリです。</p>
+
+<h2>alibaba/HandyJSON</h2>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">struct</span> <span class="synType">Item</span><span class="synSpecial">:</span> <span class="synType">HandyJSON</span> {
+    <span class="synPreProc">var</span> <span class="synIdentifier">name</span><span class="synSpecial">:</span> <span class="synType">String</span> <span class="synIdentifier">=</span> <span class="synConstant">&quot;&quot;</span>
+    <span class="synPreProc">var</span> <span class="synIdentifier">price</span><span class="synSpecial">:</span> <span class="synType">Double</span>?
+    <span class="synPreProc">var</span> <span class="synIdentifier">description</span><span class="synSpecial">:</span> <span class="synType">String</span>?
+}
+
+<span class="synStatement">if</span> <span class="synPreProc">let</span> <span class="synIdentifier">item</span> <span class="synIdentifier">=</span> Item.deserialize(from<span class="synSpecial">:</span> <span class="synType">jsonString</span>) {
+    <span class="synComment">// ...</span>
+}
+</pre>
+
+
+<p>この機能はSwift4.0以降では<code>Codable</code>でコンパイラがコード生成を使って達成できますが、<code>HandyJSON</code>は <code>Codable</code>が登場する前から動いており、Objective-CのAPIなしで動的にプロパティ名とプロパティの値の紐づけのためにメタデータを使っています。</p>
+
+<h2>Use cases</h2>
+
+<ul>
+<li>Zewo/Reflection</li>
+<li>wickwirew/Runtime</li>
+<li>alibaba/HandyJSON</li>
+<li><strong>kateinoigakukun/StubKit</strong></li>
+</ul>
+
+
+<p>最後のユースケースは私のライブラリ<code>StubKit</code>です。</p>
+
+<h2><a href="https://github.com/kateinoigakukun/StubKit">kateinoigakukun/StubKit</a></h2>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">import</span> StubKit
+
+<span class="synPreProc">struct</span> <span class="synType">User</span><span class="synSpecial">:</span> <span class="synType">Codable</span> {
+    <span class="synPreProc">let</span> <span class="synIdentifier">name</span><span class="synSpecial">:</span> <span class="synType">String</span>
+    <span class="synPreProc">let</span> <span class="synIdentifier">age</span><span class="synSpecial">:</span> <span class="synType">UInt</span>
+}
+
+<span class="synPreProc">let</span> <span class="synIdentifier">user</span> <span class="synIdentifier">=</span> try Stub.make(User.<span class="synIdentifier">self</span>)
+<span class="synComment">// User(name: &quot;This is stub string&quot;, age: 12345)</span>
+</pre>
+
+
+<p>このライブラリを使うと、たくさんのフィールドを持つstructでも引数なしで簡単にスタブをインスタンス化できます。この機能の大部分は <code>Codable</code>で実装されていますが、いくつかの機能はmetadataを使って実装されています。</p>
+
+<p><span itemscope itemtype="http://schema.org/Photograph"><a href="http://f.hatena.ne.jp/kateinoigaku/20190322173844" class="hatena-fotolife" itemprop="url"><img src="https://cdn-ak.f.st-hatena.com/images/fotolife/k/kateinoigaku/20190322/20190322173844.jpg" alt="f:id:kateinoigaku:20190322173844j:image" title="f:id:kateinoigaku:20190322173844j:image" class="hatena-fotolife" itemprop="image"></a></span></p>
+
+<p>メタデータを使った事例を紹介する前にこのスタブをインスタンスする機能がどのように動いているのかを解説します。まず、基本的に我々の使っている構造体は木構造で成り立っており、<code>Decoder</code>プロトコルを使ってトラバースすることができます。</p>
+
+<p>そのため、この木構造中の葉の部分のスタブを準備してトラバースしながらスタブを注入すれば、引数なしで任意のスタブをインスタンス化できます。</p>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">func</span> <span class="synIdentifier">leafStub</span><span class="synSpecial">&lt;T&gt;</span>(of type<span class="synSpecial">:</span> <span class="synType">T.Type</span>) <span class="synSpecial">-&gt;</span> <span class="synType">T</span> {
+    <span class="synStatement">guard</span> <span class="synPreProc">let</span> <span class="synIdentifier">stubbable</span> <span class="synIdentifier">=</span> type <span class="synStatement">as</span>? Stubbable <span class="synStatement">else</span> { <span class="synStatement">return</span> <span class="synConstant">nil</span> }
+    <span class="synStatement">return</span> type.stub
+}
+
+<span class="synPreProc">extension</span> <span class="synType">Int</span><span class="synSpecial">:</span> <span class="synType">Stubbable</span> {
+    <span class="synPreProc">var</span> <span class="synIdentifier">stub</span><span class="synSpecial">:</span> <span class="synType">Int</span> { <span class="synStatement">return</span> <span class="synConstant">12345</span> }
+}
+
+<span class="synPreProc">extension</span> <span class="synType">enum</span><span class="synSpecial">:</span> <span class="synType">Stubbable</span> { <span class="synComment">// 🚫 Can't extend</span>
+    <span class="synPreProc">var</span> <span class="synIdentifier">stub</span><span class="synSpecial">:</span> <span class="synType">Self</span> {
+        <span class="synStatement">return</span> enumStub()
+    }
+}
+</pre>
+
+
+<p>例えば、 <code>String</code>、<code>Int</code>、<code>URL</code>およびenumは葉の型になる可能性があります。 基本データの型のスタブを準備するのは簡単ですが、enumはユーザーが定義できるため、自前で定義した全てのenumのスタブを手動で準備する必要があります。これはできれば避けたいですね。そのため、メタデータを使ってenumインスタンスを動的に生成してみました。</p>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">func</span> <span class="synIdentifier">enumStub</span><span class="synSpecial">&lt;T&gt;</span>(of type<span class="synSpecial">:</span> <span class="synType">T.Type</span>) <span class="synSpecial">-&gt;</span> <span class="synType">T</span>? {
+    <span class="synStatement">if</span> isEnum(type<span class="synSpecial">:</span> <span class="synType">type</span>) {
+        <span class="synPreProc">let</span> <span class="synIdentifier">rawValue</span> <span class="synIdentifier">=</span> <span class="synConstant">0</span>
+        <span class="synPreProc">let</span> <span class="synIdentifier">rawPointer</span> <span class="synIdentifier">=</span> withUnsafePointer(to<span class="synSpecial">:</span> <span class="synType">rawValue</span>) { UnsafeRawPointer(<span class="synIdentifier">$0</span>) }
+        <span class="synStatement">return</span> rawPointer.assumingMemoryBound(to<span class="synSpecial">:</span> <span class="synType">T.self</span>).pointee
+    }
+    <span class="synStatement">return</span> <span class="synConstant">nil</span>
+}
+
+<span class="synPreProc">func</span> <span class="synIdentifier">isEnum</span><span class="synSpecial">&lt;T&gt;</span>(type<span class="synSpecial">:</span> <span class="synType">T.Type</span>) <span class="synSpecial">-&gt;</span> <span class="synType">Bool</span> {
+    <span class="synPreProc">let</span> <span class="synIdentifier">metadata</span> <span class="synIdentifier">=</span> unsafeBitCast(type, to<span class="synSpecial">:</span> <span class="synType">UnsafePointer</span><span class="synSpecial">&lt;EnumMetadata&gt;</span>.<span class="synIdentifier">self</span>).pointee
+    <span class="synStatement">return</span> metadata.kind <span class="synIdentifier">==</span> <span class="synConstant">1</span> <span class="synComment">// kind value of enum is 1</span>
+}
+</pre>
+
+
+<p>メモリレイアウトからEnumのスタブは<code>Int</code>型の値をキャストすれば手に入れられることが分かっています。しかし、その方法が使えるのはenumだけなので、スタブする型がenumの型であるか、ということをチェックする必要があります。そこでメタデータの出番です。メタデータの先頭アドレスにはその型が<code>class</code>なのか、<code>struct</code>なのか、<code>enum</code>なのか、といったkindの値が入っています。enumのkind値は1で固定なのでこの値を比較すれば型がenumかどうかを調べることができます。</p>
+
+<h2>Caution</h2>
+
+<ul>
+<li>ABI stability</li>
+<li>Responsibility</li>
+</ul>
+
+
+<p>Swift4.2ではABIが安定していないため、Swift5ではメタデータのレイアウトが崩れます。しかし、喜ばしいことにSwift5でABIの安定性が達成されました。今後は気軽にメタデータを使ったライブラリを作ることができます。ただし、Swift 4と5の両方をサポートしたい場合は維持が大変でしょう。
+私たちは大いなる力を手に入れましたが、メタデータを使うことはSwiftのオフィシャルな方法ではないことを覚えておいてください。メタデータを使う時、特に書き換える場合は、メタデータについて正しい知識を持っておく必要があります。</p>
+
+<h2>Caution</h2>
+
+<ul>
+<li>ABI stability</li>
+<li>Responsibility</li>
+</ul>
+
+
+<p>例えば、前に紹介したMethod swizzlingはSwiftの型による最適化によって元の実装に戻ってしまうことがあります。実装を入れ替えるにはテーブルを参照してメソッドを実行する必要がありますが、Devirtualizeという最適化によって動的呼び出しが静的呼び出しになってしまうのです。 魔法を使うにはこのようなケースを正しくハンドルしなければなりません。
+「大いなる力には大いなる責任が伴う」のです。</p>
+
+<h2>Summary</h2>
+
+<ul>
+<li>Swift uses metadata for dynamic behavior</li>
+<li>We can use metadata in Swift</li>
+<li>Let's write meta programming libraries!</li>
+</ul>
+
+
+<p>要点をまとめます。
+ - まず、Swiftは動的メソッドディスパッチやリフレクションのAPIなどにメタデータを内部的に使用しています。
+ - また、メモリレイアウトを再現することでSwiftでメタデータを使うことができます。とても役に立つだけでなく、単純に楽しいです。
+皆さんのメタデータを使った素晴らしいライブラリを待ち望んでいます。
+以上で終わります。ありがとうございました。</p>

@@ -1,0 +1,235 @@
+---
+layout: post
+title: "Inside SwiftUI @State編"
+date: 2019-06-08 23:21:42 +0900
+language: ja
+source_url: https://kateinoigakukun.hatenablog.com/entry/2019/06/08/232142
+permalink: /blog/2019/06/08/232142/
+---
+
+<p>WWDCでSwiftUIが発表されてから数日が経ちました。一気に世界が変わった気がしますね。
+ただ、UIKitと同様にSwiftUIはオープンソースでは無いため、我々開発者は依然挙動をエスパーしながら開発する必要があります。</p>
+
+<p>その中でも、SwiftUIのチュートリアルを試している中で不思議な仕組みがいくつかあったので、僕が調べたSwiftUIの内部構造について書き留めておきます。</p>
+
+<p>（あくまで考察なので間違っていても悪しからず）</p>
+
+<h2 id="追記2022-09-15">追記（2022-09-15）</h2>
+
+<p>未だにアクセスがあるので追記。</p>
+
+<p>TokamakというSwiftWasmでSwiftUI互換なコードを書くためのUIフレームワークがあり、
+ここで考察した内容とほぼ同じようなテクニックを使って<code>State</code>を実装しています。
+具体的な実装が気になる方は読んでみてください。</p>
+
+<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2FTokamakUI%2FTokamak" title="GitHub - TokamakUI/Tokamak: SwiftUI-compatible framework for building browser apps with WebAssembly and native apps for other platforms" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;" loading="lazy"></iframe><cite class="hatena-citation"><a href="https://github.com/TokamakUI/Tokamak">github.com</a></cite></p>
+
+<h3 id="目次">目次</h3>
+
+<ul>
+<li><code>@State</code>編（今ココ）</li>
+<li><code>DynamicViewProperty</code>編（来週くらいには書きます）</li>
+<li>差分更新編（調査中）</li>
+</ul>
+
+
+<h2 id="State"><code>@State</code></h2>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synType">@State</span> <span class="synType">var</span> value<span class="synSpecial">:</span> <span class="synType">Int</span>
+</pre>
+
+
+<p>チュートリアルをこなした方であれば何度も書いたことでしょう。</p>
+
+<p>Swift5.1からの<a href="https://github.com/apple/swift-evolution/blob/master/proposals/0258-property-delegates.md">Property Delegates</a>を使った記法で、プロパティの値のgetterとsetterを別の型（ここでは<code>State</code>）に委譲できます。</p>
+
+<p><code>State</code>というのはSwiftUIに定義された<code>@propertyDelegate</code>なstructです。変更されるとStateが定義されているViewが再レンダリングされる、という振る舞いをします。</p>
+
+<p>ではこの振る舞いからStateの実装を予想してみます。</p>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synType">@propertyDelegate</span>
+<span class="synPreProc">struct</span> <span class="synIdentifier">State</span><span class="synSpecial">&lt;</span><span class="synIdentifier">Value</span><span class="synSpecial">&gt;</span> {
+    <span class="synPreProc">var</span> <span class="synIdentifier">storage</span><span class="synSpecial">:</span> <span class="synType">Value</span>
+    <span class="synPreProc">var</span> <span class="synIdentifier">value</span><span class="synSpecial">:</span> <span class="synType">Value</span> {
+        <span class="synStatement">get</span> { storage }
+        <span class="synStatement">set</span> {
+            storage <span class="synIdentifier">=</span> newValue
+            renderView()
+        }
+    }
+    <span class="synIdentifier">init</span>(initialValue value<span class="synSpecial">:</span> <span class="synType">Value</span>) {
+        <span class="synIdentifier">self</span>.storage <span class="synIdentifier">=</span> value
+    }
+    
+    <span class="synPreProc">func</span> <span class="synIdentifier">renderView</span>() {
+        <span class="synComment">// ???</span>
+    }
+}
+
+<span class="synPreProc">struct</span> <span class="synIdentifier">ContentView</span><span class="synSpecial">:</span> <span class="synType">View</span> {
+    <span class="synType">@State</span> <span class="synType">var</span> text<span class="synSpecial">:</span> <span class="synType">String</span>
+}
+</pre>
+
+
+<p>（本当はvalueのsetterがnonmutatingなのでbox化されてるはずですが説明のため省略してます。）</p>
+
+<p>簡単に実装できましたがViewを再レンダリングする部分だけは想像できません。<code>keyWindow</code>配下のViewを全て再レンダリングしているのか？、と一瞬思いましたが、Stateが変更されてもルートのViewから全て再レンダリングされる訳では無さそうです。
+では、どうやって<code>text: State&lt;String&gt;</code>と<code>ContentView</code>を紐付けて<code>ContentView</code>だけ再レンダリングしているのでしょうか。</p>
+
+<h2 id="Stateの内部構造">Stateの内部構造</h2>
+
+<p>とりあえず<code>State</code>のpublicなフィールドにはそれっぽい物は無いので、内部フィールドを<code>dump</code>で調べてみます。</p>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">struct</span> <span class="synIdentifier">ContentView</span><span class="synSpecial">:</span> <span class="synType">View</span> {
+    <span class="synPreProc">var</span> <span class="synIdentifier">text</span> <span class="synIdentifier">=</span> State<span class="synIdentifier">&lt;</span>String<span class="synIdentifier">&gt;</span>(initialValue<span class="synSpecial">:</span> <span class="synConstant">&quot;Hello&quot;</span>)
+    
+    <span class="synIdentifier">init</span>() {
+        print(<span class="synConstant">&quot;Init:&quot;</span>)
+        dump(text)
+    }
+    
+    <span class="synPreProc">var</span> <span class="synIdentifier">body</span><span class="synSpecial">:</span> <span class="synType">some</span> View {
+        print(<span class="synConstant">&quot;Body:&quot;</span>)
+        dump(text)
+        <span class="synStatement">return</span> Text(<span class="synConstant">&quot;Hello, world&quot;</span>)
+    }
+}
+</pre>
+
+
+<p>(<code>State</code>が<code>delegateValue</code>を使っており<code>$text</code>が<code>State</code>を返さないのでProperty Delegateを使わない記法にあえてしています。）</p>
+
+<p><code>init</code>と<code>body</code>でそれぞれ<code>text: State&lt;String&gt;</code>をdumpしましたが、実は違った結果が出力されます。</p>
+
+<pre class="code" data-lang="" data-unlink>Init:
+▿ SwiftUI.State&lt;Swift.String&gt;
+  - _value: &#34;Hello&#34;
+  - _location: nil
+
+Body:
+▿ SwiftUI.State&lt;Swift.String&gt;
+  - _value: &#34;Hello&#34;
+  ▿ _location: Optional(SwiftUI.StoredLocation&lt;Swift.String&gt;)
+    ▿ some: SwiftUI.StoredLocation&lt;Swift.String&gt; #0
+      - super: SwiftUI.AnyLocation&lt;Swift.String&gt;
+        - super: SwiftUI.AnyLocationBase
+      ▿ viewGraph: Optional(SwiftUI.ViewGraph)
+        ...</pre>
+
+
+<p>ViewGraphという怪しいオブジェクトが見えるようになりました。initとbodyの間に何かしらの方法でStateにViewGraphが注入されています。</p>
+
+<p>Internalな型なので名前から推測するしかありませんが、どうやらViewGraphはViewのツリー構造を管理するオブジェクトのようです。このViewGraphがContentViewのみを選択的にレンダリングできる、と仮定すると再レンダリングの仕組みは説明できそうです。
+では、StateがViewGraphを持つことを考慮して最初のStateの実装の<code>???</code>を埋めてみます。</p>
+
+<pre class="code lang-diff" data-lang="diff" data-unlink> @propertyDelegate
+ struct State&lt;Value&gt; {
+     var storage: Value
+<span class="synIdentifier">+    var viewGraph: ViewGraph?</span>
+     var value: Value {
+         get { storage }
+         set {
+             storage = newValue
+             renderView()
+         }
+     }
+     init(initialValue value: Value) {
+         self.storage = value
+     }
+ 
+<span class="synIdentifier">+    func setViewGraph(_ viewGraph: ViewGraph) {</span>
+<span class="synIdentifier">+        self.viewGraph = viewGraph</span>
+<span class="synIdentifier">+    }</span>
+ 
+     func renderView() {
+<span class="synIdentifier">+        viewGraph.render()</span>
+     }
+ }
+</pre>
+
+
+<p>なるほど、Viewを再レンダリングする方法は分かりました。しかし、未だどうやって<code>ContentView</code>と<code>State</code>を紐付けて<code>ContentView</code>の<code>ViewGraph</code>を注入するのか、は謎のままです。</p>
+
+<p>先ほどの実験から<code>init</code>と<code>body</code>の間に呼ばれることは分かっていますが、どこから呼ばれるかは不明です。</p>
+
+<p>また、<code>@State</code>フィールドは<code>View</code>に対して生えていますが、protocolでフィールド名が縛られている訳では無いので<code>text: State&lt;String&gt;</code>にアクセスする方法がありません。
+例えば以下のようにprotocolで縛られていれば注入できると思いますが、実際フィールド名は自由に付けられるので他の方法で実現されているようです。</p>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">protocol</span> <span class="synIdentifier">ViewGraphInjectable</span> {
+    <span class="synPreProc">var</span> <span class="synIdentifier">state</span><span class="synSpecial">:</span> <span class="synType">State</span><span class="synSpecial">&lt;</span><span class="synIdentifier">Value</span><span class="synSpecial">&gt;</span> { <span class="synStatement">get</span> }
+}
+
+<span class="synPreProc">struct</span> <span class="synIdentifier">ContentView</span><span class="synSpecial">:</span> <span class="synType">View</span>, ViewGraphInjectable {
+    <span class="synType">@State</span> <span class="synType">var</span> state<span class="synSpecial">:</span> <span class="synType">String</span>
+}
+</pre>
+
+
+<h2 id="Reflection-API">Reflection API</h2>
+
+<p>protocolを使わずに任意の構造体から動的に値を取り出す、となると真っ先に思いつくのが<code>Mirror</code>です。<code>View</code>を<code>Mirror</code>にかけて、<code>children</code>を取り出して、その中に<code>State</code>型があれば<code>setViewGraph</code>を呼ぶ、という比較的単純な方法です。</p>
+
+<p>それでは本当に<code>Mirror</code>を使っているか実験してみましょう。<code>CustomReflectable</code>が実装されている場合、<code>Mirror</code>にかけると<code>customMirror</code>が呼ばれるはずなので、<code>"Mirror is used!"</code>が出力されるはずです。</p>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">struct</span> <span class="synIdentifier">ContentView</span><span class="synSpecial">:</span> <span class="synType">View</span>, CustomReflectable {
+    <span class="synType">@State</span> <span class="synType">var</span> text<span class="synSpecial">:</span> <span class="synType">String</span>
+    <span class="synPreProc">var</span> <span class="synIdentifier">customMirror</span><span class="synSpecial">:</span> <span class="synType">Mirror</span> {
+        print(<span class="synConstant">&quot;Mirror is used!&quot;</span>)
+        <span class="synStatement">return</span> Mirror(reflecting<span class="synSpecial">:</span> <span class="synType">self</span>)
+    }
+}
+</pre>
+
+
+<p>しかし、実際は<code>customMirror</code>は呼ばれません。念のため、<code>Mirror</code>が使っているランタイムAPI、<code>swift_reflectionMirror_count</code>にブレークポイントを貼ってみましたがヒットしませんでした。</p>
+
+<p>つまり、SwiftUIは内部で<code>Mirror</code>を使わずに<code>View</code>のフィールドを取得している訳です。</p>
+
+<h2 id="Mirrorを使わないReflection"><code>Mirror</code>を使わないReflection</h2>
+
+<p><code>Mirror</code>を使わずともフィールドを取得する方法はまだあります。そうですメタデータを利用する方法です。<a href="https://twitter.com/kateinoigakukun/status/1109019101224001536">メタデータについては僕のtry! Swiftの発表を見てもらえると雰囲気が掴めると思います。</a></p>
+
+<p>メタデータには<code>Field Descriptor</code>という、その型のフィールドのアクセサ群が格納されています。それを利用すればフィールドの一覧を取得できるので<code>Mirror</code>の代わりに使っている可能性は十分にあります。</p>
+
+<p>色々と試行錯誤した結果<sup id="fnref:1"><a href="#fn:1" rel="footnote">1</a></sup>、SwiftUIが内部で<code>ViewGraph</code>を組み立てるのに使っている<code>AttributeGraph.framework</code>というプライベートフレームワークが内部でメタデータを使っている事が分かりました。</p>
+
+<p>では早速<code>AttributeGraph.framework</code>のシンボルを<code>nm</code>コマンドで見てみましょう。</p>
+
+<pre class="code lang-sh" data-lang="sh" data-unlink>$ nm /System/Library/PrivateFrameworks/AttributeGraph.framework/AttributeGraph
+</pre>
+
+
+<p><code>AG::swift::metadata_visitor::visit_field</code> というシンボルが見えると思います。アセンブリを全て読んだ訳ではありませんが、名前から察するにメタデータからフィールドをVisitorパターンで回していそうです。ブレークポイントを貼ってみると実際に動いている様子が確認できます。</p>
+
+<h2 id="なぜMirrorを使わないのか">なぜ<code>Mirror</code>を使わないのか</h2>
+
+<p>ではなぜ<code>Mirror</code>でもできることをメタデータで実装しているのでしょうか。完全に私の考察ですが、パフォーマンスが主な理由だと思っています。</p>
+
+<p><code>Mirror</code>は<code>children</code>を<code>[(label: String, value: Any)]</code>で表現します。任意の型を表現するのに<code>Any</code>を使っていますが、<code>Any</code>は値をラップしているため、実際の値を使うには毎回取り出す必要があります。<code>View</code>が多くなればなるほどこのオーバーヘッドは無視できなくなってくるため、フィールドをポインタで直接操作できる<code>Field Descriptor</code>を使っている、というのが予想です。</p>
+
+<h2 id="StateがViewに更新されるまで">StateがViewに更新されるまで</h2>
+
+<p>ここまでの実験で<code>State</code>が変更された際にどうやって<code>View</code>が再レンダリングされるか予想できたのでまとめます。</p>
+
+<ol>
+<li><code>View</code>に対して<code>Field Descriptor</code>で<code>State</code>を探して<code>ViewGraph</code>を注入する</li>
+<li><code>View.body</code>を評価してレンダリングする。</li>
+<li><code>State</code>が変更される</li>
+<li><code>State</code>が<code>ViewGraph</code>に変更を通知する</li>
+<li><code>View.body</code>が再評価され<code>View</code>が更新される。</li>
+</ol>
+
+
+<p>実際の実装はAppleのみぞ知るところですが、これ以上のアイディアは思いつきませんでした。ただ、<code>AttributeGraph.framework</code>が独自にリフレクションの仕組みを使っているのは確実です。</p>
+
+<p>try! Swiftの発表で「メタデータを使ったライブラリをみんな作ってみてね」と言いましたが、まさかAppleがABI安定化を期に率先して使ってくるとは思いませんでした。今年のWWDCは驚くことばかりですね。</p>
+
+<p>次はDynamicViewPropertyについて書きます。</p>
+<div class="footnotes">
+<hr/>
+<ol>
+<li id="fn:1">
+<p>これは先に調査していた<code>DynamicViewProperty</code>の仕組みを考えた上でのエスパーです。<a href="#fnref:1" rev="footnote">&#8617;</a></p></li>
+</ol>
+</div>

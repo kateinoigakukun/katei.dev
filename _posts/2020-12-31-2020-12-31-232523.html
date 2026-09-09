@@ -1,0 +1,73 @@
+---
+layout: post
+title: "2020年のオープンソース活動"
+date: 2020-12-31 23:25:23 +0900
+language: ja
+source_url: https://kateinoigakukun.hatenablog.com/entry/2020/12/31/232523
+permalink: /blog/2020/12/31/232523/
+---
+
+<p>2020年はOSS開発に多く時間を使ってきたなぁと思ったのと、GitHub Sponsorsからの振り込みがあったので、報告を兼ねて軽く今年何をしてきたか振り返ってみようと思います。</p>
+
+<h2><a href="https://github.com/swiftwasm">SwiftWasm</a></h2>
+
+<p>年間を通してずっと開発していたプロジェクトの一つです。このプロジェクト関連でコンパイラやリンカ、デバッガなどいろいろなものを作ってきました。
+必要に迫られてLLVMやICUなどの有名どころのプロジェクトにもコントリビューションする機会がありました。</p>
+
+<p>ツールチェーンがおおよそ動くようになってからは、コントリビュータを増やすための発信をしたりディスカッションの場を用意したり、といった活動もしています。
+最近は来るSwift 6に導入予定のasync/awaitのWasm上でのプロトタイプを実装しています。</p>
+
+<p>進捗報告</p>
+
+<ul>
+<li><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fengineering.mercari.com%2Fblog%2Fentry%2F2020-04-09-130642%2F" title="SwiftのWebAssembly対応の進捗" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://engineering.mercari.com/blog/entry/2020-04-09-130642/">engineering.mercari.com</a></cite></li>
+<li><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fblog.swiftwasm.org%2F" title="Updates on what&#39;s new in the SwiftWasm ecosystem | SwiftWasm Blog" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://blog.swiftwasm.org/">blog.swiftwasm.org</a></cite></li>
+<li><a href="https://zenn.dev/katei/articles/swiftwasm-5-3-release">SwiftWasm 5.3 &#x30EA;&#x30EA;&#x30FC;&#x30B9;&#x30CE;&#x30FC;&#x30C8;</a></li>
+</ul>
+
+
+<p>つくったもの</p>
+
+<ul>
+<li><a href="https://kateinoigakukun.hatenablog.com/entry/2020/02/29/134510">WebAssembly&#x5411;&#x3051;&#x306E;&#x30C7;&#x30D0;&#x30C3;&#x30AC;&#x3092;&#x958B;&#x767A;&#x3057;&#x307E;&#x3057;&#x305F; - kateinoigakukun&#x306E;&#x30D6;&#x30ED;&#x30B0;</a></li>
+<li><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fkateinoigakukun%2Fwasminspect" title="kateinoigakukun/wasminspect" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/kateinoigakukun/wasminspect">github.com</a></cite></li>
+<li><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fswiftwasm%2FJavaScriptKit" title="swiftwasm/JavaScriptKit" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/swiftwasm/JavaScriptKit">github.com</a></cite></li>
+<li><a href="https://speakerdeck.com/kateinoigakukun/wasmrinkafalsetukurikata">Wasm&#x30EA;&#x30F3;&#x30AB;&#x306E;&#x3064;&#x304F;&#x308A;&#x304B;&#x305F; - Speaker Deck</a></li>
+<li><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fkateinoigakukun%2Fchibi-link" title="kateinoigakukun/chibi-link" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/kateinoigakukun/chibi-link">github.com</a></cite></li>
+<li><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fswiftwasm%2Fswiftwasm-pad" title="swiftwasm/swiftwasm-pad" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/swiftwasm/swiftwasm-pad">github.com</a></cite></li>
+</ul>
+
+
+<h3>GSoC</h3>
+
+<p>4月の時点でSwiftWasmはおおよそ動くようになっていたので、あとはバイナリサイズの縮小のための最適化をやりたいなと思っていたところ、運の良いことにちょうど良いプロジェクトがあったので応募してみました。</p>
+
+<p>実際には5月から8月までGoogle Summer of Codeの学生としてSwiftのリンク時最適化を実装していました。詳しい話はSwiftコンパイラの勉強会<a href="https://iosdiscord.connpass.com/">「わいわいswiftc」</a>で話したので興味がある方はスライドか動画をみてください。</p>
+
+<ul>
+<li>スライド: <a href="https://speakerdeck.com/kateinoigakukun/swiftfalsethin-cross-module-optimization-wip">Swift&#x306E;Thin Cross Module Optimization (WIP) - Speaker Deck</a></li>
+<li>動画: <a href="https://youtu.be/-cAo1RNy514">&#x308F;&#x3044;&#x308F;&#x3044;swiftc #22 - YouTube</a></li>
+</ul>
+
+
+<p>実証実験としてある程度の成果はあったもののメインストリームにはまだ入っていません。2021年内には入れたいです。</p>
+
+<p><span itemscope itemtype="http://schema.org/Photograph"><img src="https://cdn-ak.f.st-hatena.com/images/fotolife/k/kateinoigaku/20201231/20201231230651.png" alt="f:id:kateinoigaku:20201231230651p:plain" title="" class="hatena-fotolife" itemprop="image"></span></p>
+
+<h2><a href="https://github.com/IBDecodable/IBLinter">IBLinter</a></h2>
+
+<p>かれこれ作ってから3年目になりました。SwiftUIが登場してお役御免になるかと思いきや、まだ暫くは使っていただけている様子で、ちょこちょこ新しい機能が追加されています。 今年面白かったのは<a href="https://twitter.com/r_plus">@r_plusさん</a>のPRで実装されたUIStackViewのbackgroundColor検知機能です。</p>
+
+<p><blockquote data-conversation="none" class="twitter-tweet" data-lang="ja"><p lang="ja" dir="ltr">IBLinterの最新バージョンをリリースしました。<br>xibとstoryboardにおいて、UIStackViewのbackgroundColor設定していると警告を出すルールが追加されました。これでiOS14以上で意図せず背景色がついてしまう問題を機械的に対処できます. Thanks <a href="https://twitter.com/r_plus?ref_src=twsrc%5Etfw">@r_plus</a> !<br> <a href="https://t.co/VarZdcefNP">https://t.co/VarZdcefNP</a></p>&mdash; kateinoigakukun (@kateinoigakukun) <a href="https://twitter.com/kateinoigakukun/status/1309822149377445888?ref_src=twsrc%5Etfw">2020年9月26日</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script> </p>
+
+<h2><a href="https://github.com/peripheryapp/periphery">Periphery</a></h2>
+
+<p>使われていないコードを検出してくれるツールなのですが、暫く開発が止まっており最新のXcodeで動かなくなっていたのでPRを投げていたところメンテナになりました。その後はSourceKitベースの解析をIndexStoreベースの解析に切り替えたり、Xcodeのアップデートに追従したりといったコントリビューションをしていました。最近オリジナル作者の <a href="https://github.com/ileitch">@ileitch</a>さんが開発を再開していますが、スター数の割にコントリビュータが少ないのが少々不安です。興味がある方はぜひ。</p>
+
+<h2>まとめ</h2>
+
+<p>ここに書いたほぼすべての活動は、インターン先であるメルペイの業務時間でコミュニティ活動として行われています。会社の支援がなければ学業と両立してここまでやってこれていないので本当に良い社だと思います。</p>
+
+<p>また、ありがたいことに<a href="https://github.com/sponsors/kateinoigakukun/">GitHub Sponsors</a>で支援してくださる方もいらっしゃり、活動のモチベーションの維持に大きくプラスになっています。いつもありがとうございます。</p>
+
+<p>来年も継続して活動していけるよう頑張っていきます。</p>

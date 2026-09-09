@@ -1,150 +1,20 @@
-<!DOCTYPE html>
-<html lang="en">
+---
+layout: default
+title: About
+---
+<section class="intro">
+  <p class="eyebrow">Software engineer · Tokyo</p>
+  <h1>Yuta Saito</h1>
+  <p>I work on compilers and WebAssembly at <a href="https://www.goodnotes.com/">Goodnotes</a>. I’m an open source committer for <a href="https://github.com/apple/swift">Swift</a>, <a href="https://www.ruby-lang.org/">Ruby</a>, and <a href="https://llvm.org/">LLVM</a>.</p>
+  <p>Projects: <a href="https://github.com/ruby/ruby.wasm">ruby.wasm</a> · <a href="https://github.com/swiftwasm">SwiftWasm</a></p>
+</section>
 
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="icon" href="https://avatars3.githubusercontent.com/u/11702759?s=32" />
-  <title>Yuta Saito</title>
-  <style>
-    body {
-      font-family: monospace;
-    }
-    main {
-      max-width: 800px;
-      margin: 0 auto;
-      word-break: break-word;
-    }
-    .project-name {
-      word-break: keep-all;
-    }
-    .company {
-      word-break: keep-all;
-    }
-    th.year-range {
-      text-align: left;
-    }
-  </style>
-</head>
+<section>
+  <h2>Writing</h2>
+  <p>See the <a href="{{ '/blog/' | relative_url }}">blog</a> for technical notes and occasional updates.</p>
+</section>
 
-<body>
-  <main>
-    <section>
-      <h2 id="profile">Profile</h2>
-      <ul>
-        <li>Software Engineer at <a href="http://goodnotes.com/">Goodnotes</a></li>
-        <li>Open source committer - <a target="_blank" href="https://github.com/apple/swift">Swift</a>, <a
-            target="_blank" href="https://www.ruby-lang.org">Ruby</a>, <a target="_blank"
-            href="https://llvm.org/">LLVM</a>
-          and etc.</li>
-      </ul>
-      <iframe src="https://github.com/sponsors/kateinoigakukun/button" title="Sponsor kateinoigakukun" height="32" width="114" style="border: 0; border-radius: 6px;"></iframe>
-    </section>
-
-    <section>
-      <h2 id="projects">Projects</h2>
-      <table>
-        <tr>
-          <th class="project-name"><a target="_blank" href="https://github.com/ruby/ruby.wasm">ruby.wasm</a></th>
-          <td></td>
-          <td>WebAssembly Support for Ruby</td>
-        </tr>
-        <tr>
-          <th class="project-name"><a target="_blank" href="https://github.com/swiftwasm">SwiftWasm</a></th>
-          <td></td>
-          <td>WebAssembly Support for Swift</td>
-        </tr>
-      </table>
-    </section>
-
-    <section>
-      <h2 id="work-experience">Work</h2>
-      <table>
-        <tr>
-          <th class="year-range">2024.01-</th>
-          <td class="company"><a target="_blank" href="https://www.goodnotes.com/">Goodnotes</a></td>
-          <td>Compiler Engineer</td>
-        </tr>
-        <tr>
-          <th class="year-range">2023.08-2023.11</th>
-          <td class="company"><a target="_blank" href="https://www.apple.com">Apple</a></td>
-          <td>Compiler Engineer Intern at Swift team</td>
-        </tr>
-        <tr>
-          <th class="year-range">2022.05-2023.07</th>
-          <td class="company"><a target="_blank" href="https://www.goodnotes.com/">Goodnotes</a></td>
-          <td>Part-time Compiler Engineer</td>
-        </tr>
-      </table>
-      See <a target="_blank" href="https://www.linkedin.com/in/kateinoigakukun">LinkedIn</a> for more details.
-    </section>
-
-    <section>
-      <h2 id="contacts">Contacts</h2>
-      <table>
-        <tr>
-          <th>E-mail</th>
-          <td>kateinoigakukun at gmail.com</td>
-        </tr>
-        <tr>
-          <th>X</th>
-          <td><a target="_blank" href="https://x.com/kateinoigakukun">@kateinoigakukun</a></td>
-        </tr>
-        <tr>
-          <th>GitHub</th>
-          <td><a target="_blank" href="https://github.com/kateinoigakukun">@kateinoigakukun</a></td>
-        </tr>
-        <tr>
-          <th>Mastodon</th>
-          <td><a target="_blank" rel="me" href="https://ruby.social/@katei">katei@ruby.social</a></td>
-        </tr>
-      </table>
-    </section>
-
-    <section>
-      <h2>Links</h2>
-      <ul>
-        <li><a target="_blank" href="https://www.linkedin.com/in/kateinoigakukun">LinkedIn</a></li>
-        <li><a target="_blank" href="https://speakerdeck.com/kateinoigakukun">Speaker Deck</a></li>
-        <li><a target="_blank" href="https://kateinoigakukun.hatenablog.com/">Blog (ja)</a></li>
-        <li><a target="_blank" href="https://medium.com/@kateinoigakukun">Blog (en)</a></li>
-      </ul>
-    </section>
-
-    <section>
-      <h2 id="awards">Awards</h2>
-      <ul>
-        <li>
-          1st place for ACM Student Research Competition at CGO 2023 in undergraduate category<br>
-          <a target="_blank" href="https://src.acm.org/winners/2023">https://src.acm.org/winners/2023</a>
-        </li>
-        <li>
-          Ruby Prize 2022<br>
-          <a target="_blank" href="https://rubyprize.jp/22_rubyprize.html">https://rubyprize.jp/22_rubyprize.html</a>
-        </li>
-      </ul>
-    </section>
-
-    <section>
-      <h2 id="talks">Talks</h2>
-      <ul>
-        <li>
-          <a target="_blank" href="https://speakerdeck.com/kateinoigakukun/ruby-meets-webassembly">Ruby meets
-              WebAssembly</a> (<a target="_blank"
-              href="https://speakerdeck.com/kateinoigakukun/ruby-meets-webassembly">RubyKaigi
-              2022</a>)
-        </li>
-        <li>
-          <a target="_blank"
-              href="https://speakerdeck.com/kateinoigakukun/the-state-of-swift-for-webassembly-in-2022">The state of
-              Swift for WebAssembly in 2022</a> (<a target="_blank"
-              href="https://fortee.jp/iosdc-japan-2022/proposal/fa87f700-1483-456b-9b28-ba7c119cfa69">iOSDC
-              2022</a>)
-        </li>
-      </ul>
-      See <a target="_blank" href="https://speakerdeck.com/kateinoigakukun">Speaker Deck</a> for more talks.
-    </section>
-  </main>
-</body>
-
-</html>
+<section>
+  <h2>Elsewhere</h2>
+  <p><a href="https://www.linkedin.com/in/kateinoigakukun">LinkedIn</a></p>
+</section>

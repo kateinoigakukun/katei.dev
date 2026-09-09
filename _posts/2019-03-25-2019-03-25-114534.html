@@ -1,0 +1,65 @@
+---
+layout: post
+title: "try! Swift 2019"
+date: 2019-03-25 11:45:34 +0900
+language: ja
+source_url: https://kateinoigakukun.hatenablog.com/entry/2019/03/25/114534
+permalink: /blog/2019/03/25/114534/
+---
+
+<p>毎年期末試験の時期と重なって参加を断念していたので初参加でした。</p>
+
+<p>参加できるだけでも嬉しかったのですが、光栄なことにスピーカーとして登壇することもできました。</p>
+
+<p>大きなカンファレンスでの登壇は昨年のiOSDCが最初で今回はそれ以来です。ただ、今回は規模がさらに大きいことや、英語での登壇だったこともあり余裕は全くなかったです。</p>
+
+<p>どのくらい余裕がなかったかというと、2日目、登壇する直前の午前中のトークをほぼ覚えていないくらいです。絶対にキャッチアップするので許してください。</p>
+
+<h2>登壇</h2>
+
+<p><a href="https://kateinoigakukun.hatenablog.com/entry/2019/03/22/184356">Swift Type Metadata (en) - kateinoigakukun&#x306E;&#x30D6;&#x30ED;&#x30B0;</a></p>
+
+<p><a href="https://kateinoigakukun.hatenablog.com/entry/2019/03/22/180030">Swift Type Metadata (ja) - kateinoigakukun&#x306E;&#x30D6;&#x30ED;&#x30B0;</a></p>
+
+<script async class="speakerdeck-embed" data-id="c969176dbb024e69abc7535bebaf43e4" data-ratio="1.77777777777778" src="//speakerdeck.com/assets/embed.js"></script>
+
+
+<p>Swiftのメタデータについて話しました。内容的には年末に書いたアドカレの発展版です。
+<a href="https://qiita.com/kateinoigakukun/items/8718d152c3708a7a314b">Swift Type metadata - Qiita</a></p>
+
+<p>わいわいswiftcで@omochimetaruが楽しそうに話していたのがきっかけで調べ始めたのですが、ここら辺の技術は掘れば掘るほど面白かったです。</p>
+
+<p>ただ、発表は20分しか無い上に900人にウケる内容にする必要があるので、風呂敷を広げすぎないように構成するのが大変でした。シュッと飛ばした部分が結構あるので、今回の発表で興味を持った方はこの辺を見てもらえると色々と繋がってきて楽しいと思います。</p>
+
+<ul>
+<li><a href="https://qiita.com/kateinoigakukun/items/8718d152c3708a7a314b">Swift Type metadata - Qiita</a></li>
+<li><a href="https://speakerdeck.com/omochi/irgenkarajian-tatype-metadata">IRGen&#x304B;&#x3089;&#x898B;&#x305F;Type Metadata - Speaker Deck</a></li>
+<li><a href="https://speakerdeck.com/omochi/swiftfalsezienerikusuhadouyatutedong-iteirufalsekakonpairafalsesosukaratan-ru">Swift&#x306E;&#x30B8;&#x30A7;&#x30CD;&#x30EA;&#x30AF;&#x30B9;&#x306F;&#x3069;&#x3046;&#x3084;&#x3063;&#x3066;&#x52D5;&#x3044;&#x3066;&#x3044;&#x308B;&#x306E;&#x304B;&#x30B3;&#x30F3;&#x30D1;&#x30A4;&#x30E9;&#x306E;&#x30BD;&#x30FC;&#x30B9;&#x304B;&#x3089;&#x63A2;&#x308B; - Speaker Deck</a></li>
+<li><a href="https://speakerdeck.com/omochi/zieneritukuxing-falsemetataipu">&#x30B8;&#x30A7;&#x30CD;&#x30EA;&#x30C3;&#x30AF;&#x578B;&#x306E;&#x30E1;&#x30BF;&#x30BF;&#x30A4;&#x30D7; - Speaker Deck</a></li>
+<li><a href="https://speakerdeck.com/omochi/swiftrantaimuraiburaritovalue-witness-table">Swift&#x30E9;&#x30F3;&#x30BF;&#x30A4;&#x30E0;&#x30E9;&#x30A4;&#x30D6;&#x30E9;&#x30EA;&#x3068;Value Witness Table - Speaker Deck</a></li>
+<li><a href="https://speakerdeck.com/kateinoigakukun/konpairakaraniu-jie-kuswift-method-dispatch-1">&#x30B3;&#x30F3;&#x30D1;&#x30A4;&#x30E9;&#x304B;&#x3089;&#x7D10;&#x89E3;&#x304F;Swift method dispatch - Speaker Deck</a></li>
+<li><a href="https://speakerdeck.com/kateinoigakukun/boxshi-type-erasurefalsemethod-dispatch">Box&#x5F0F;Type Erasure&#x306E;method dispatch - Speaker Deck</a></li>
+</ul>
+
+
+<p>後半で紹介した拙作のOSSはメルカリのインターンの中で作ったものです。基本的なアイディアはCodableのデコードの仕組みに乗っかって任意の構造体を組み立てる、という簡単なものです。</p>
+
+<p>最初はenumをサポートしておらず、各自書いてもらう方式をとっていたのですが、今回のスピーカーで僕のメンターでもある@tarunonから、どうにかしてくれ〜と御達しがあったので、なんとか作りました。</p>
+
+<p>初めてコンパイラの勉強が業務の役に立ちました。</p>
+
+<p>英語で話したこともあってか、Ask the speakerの時間に何人か海外の方もいらしてくださり、今回は言及出来なかったstaticなメタプログラミングとの比較や具体的なユースケースの実装相談など、楽しく議論することができました。何より自分の話した内容が伝わっていることが実感できて嬉しかったです。</p>
+
+<h2>セッション</h2>
+
+<p>個人的に面白かったトークは 「<a href="https://www.tryswift.co/events/2019/tokyo/jp/#generics">protocol/extensionにジェネリクスを入れたい</a>」です。型パラを静的に分解して詰め直す技がテクニカルでした。カンファレンス中にお話する機会が何度かあったのですが、Swiftに限らない言語の型システムの深い理解から来る興味深い話が聞けました。</p>
+
+<h2>ワークショップ</h2>
+
+<p>ワークショップはOpen Source Swiftに参加しました。以前自分が報告した <a href="https://bugs.swift.org/browse/SR-7467">SR-7467</a> に取り組みました。調査を始めた時はTypeCheckerのキャッシュ機構のバグだと思っていたのですが実際の問題は別のところにあり、相当時間を使ってしまいました。最終的にバグの原因は完全にわかったのですが、色々と考慮漏れがあり未だテストが通ってません。</p>
+
+<p><a href="https://github.com/apple/swift/pull/23514">[SR-7467] Skip validation while checking protocol conformance by kateinoigakukun &middot; Pull Request #23514 &middot; apple/swift &middot; GitHub</a></p>
+
+<h2>今後</h2>
+
+<p>やりたいこと、勉強したいことは増えるばかりで時間がいくらあっても足りません。正しく取捨選択していくぞ</p>

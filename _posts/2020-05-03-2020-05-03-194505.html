@@ -1,0 +1,97 @@
+---
+layout: post
+title: "IndexStoreを使ってSwiftコードを静的解析する"
+date: 2020-05-03 19:45:05 +0900
+language: ja
+source_url: https://kateinoigakukun.hatenablog.com/entry/2020/05/03/194505
+permalink: /blog/2020/05/03/194505/
+---
+
+<p>Swiftで静的解析ツールを作るとなると、基本的にSwiftSyntaxを使うことが多いと思います。
+ただ、SwiftSyntaxで得られる情報はコンパイラ内部のパイプラインの序盤で生成されるため、「ある変数がどこから参照されているか」といった意味解析後に解る情報は使えません。</p>
+
+<p>そこで、Xcodeがコードジャンプやリネームなどに使っている（だろう）Index-While-Buildingという仕組みを紹介します。</p>
+
+<p>Index-While-Buildingとはその名の通りコンパイラがコンパイル中に生成する中間情報をIDEのコードインデックスに利用する、という仕組みです。
+<code>swiftc</code>や<code>clang</code>には<code>-index-store-path</code>というオプションがありディレクトリを指定することで、そこにインデックスデータが出力されます。</p>
+
+<p>この仕組で生成されたデータは、<code>libIndexStore</code>を使って読み取ることができます。 <code>libIndexStore</code>はAppleがフォークするLLVMプロジェクトの一部で、Xcodeのツールチェーンに同梱されています。</p>
+
+<p>詳しい話はこちらのドキュメントを参照してください。</p>
+
+<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fdocs.google.com%2Fdocument%2Fd%2F1cH2sTpgSnJZCkZtJl1aY-rzy4uGPcrI-6RrUpdATO2Q" title="Adding Index-While-Building support to Clang" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://docs.google.com/document/d/1cH2sTpgSnJZCkZtJl1aY-rzy4uGPcrI-6RrUpdATO2Q">docs.google.com</a></cite></p>
+
+<p>libIndexStoreの仕組みを使えば、SwiftSyntaxの構文レベルでの解析では実現できなかった、よりリッチな解析が可能になります。</p>
+
+<p>libIndexStoreを使った例には以下のようなものがあります。</p>
+
+<ul>
+<li><a href="https://github.com/apple/sourcekit-lsp">apple/sourcekit-lsp</a>: Swift向けLSP実装</li>
+<li><a href="https://github.com/apple/indexstore-db">apple/indexstore-db</a>: sourcekit-lsp向けのIndexStoreクライアント + クエリ高速化のためのDB。</li>
+<li><a href="https://github.com/peripheryapp/periphery">peripheryapp/periphery</a>: 未使用コードを検出するツール</li>
+<li><a href="https://github.com/apple/swift-package-manager">apple/swift-package-manager</a>: Swiftのパッケージング管理 + ビルドシステム
+
+<ul>
+<li><a href="https://github.com/apple/swift-package-manager/blob/1444b46dbc13477f027959e4d59e520747fc8382/swift-tools-support-core/Sources/TSCUtility/IndexStore.swift">テストケースの自動検出にlibIndexStoreが使われている</a></li>
+</ul>
+</li>
+</ul>
+
+
+<p>しかし、いざlibIndexStoreを使ってツールを作ろうとすると、Swift向け<code>libIndexStore</code>クライアントが無いことに気が付きます。上で紹介したツール達はそれぞれ内部でlibIndexStoreとのバインディングを自前実装しています。 <code>indexstore-db</code>は一応IndexStoreクライアントとして使うこともできますが、単にIndexStoreを使うためにはtoo muchかつsourcekit-lspから使われる前提でAPIが公開されているため制約が多いです。</p>
+
+<p>そこで、（比較的）libIndexStoreのインターフェースをそのままSwiftから使うためのクライアントライブラリを書きました。</p>
+
+<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fkateinoigakukun%2Fswift-indexstore" title="kateinoigakukun/swift-indexstore" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/kateinoigakukun/swift-indexstore">github.com</a></cite></p>
+
+<p>そして、そのライブラリを使って実装したのが<a href="https://github.com/kateinoigakukun/swift-renamer">swift-renamer</a>です。雑に紹介するとXcodeのリネーム機能をプログラマブルに制御するようなライブラリです。</p>
+
+<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fkateinoigakukun%2Fswift-renamer" title="kateinoigakukun/swift-renamer" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/kateinoigakukun/swift-renamer">github.com</a></cite></p>
+
+<p>こんな感じのコードを書くと</p>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">import</span> SwiftRenamer
+
+<span class="synPreProc">let</span> <span class="synIdentifier">renamer</span> <span class="synIdentifier">=</span> SwiftRenamer(storePath<span class="synSpecial">:</span> <span class="synType">indexStorePath</span>)
+<span class="synPreProc">let</span> <span class="synIdentifier">replacements</span> <span class="synIdentifier">=</span> try system.replacements(<span class="synStatement">where</span><span class="synSpecial">:</span> { (occ) <span class="synSpecial">-&gt;</span> <span class="synType">String</span>? <span class="synStatement">in</span>
+    occ.symbol.usr <span class="synIdentifier">==</span> <span class="synConstant">&quot;s:16IntegrationTests9ViewModelC4nameSSSgvp&quot;</span> ? <span class="synConstant">&quot;nickname&quot;</span> <span class="synSpecial">:</span> <span class="synType">nil</span>
+})
+
+<span class="synStatement">for</span> (filePath, replacements) <span class="synStatement">in</span> replacements {
+    <span class="synPreProc">let</span> <span class="synIdentifier">rewriter</span> <span class="synIdentifier">=</span> try SourceRewriter(content<span class="synSpecial">:</span> <span class="synType">String</span>(contentsOfFile<span class="synSpecial">:</span> <span class="synType">filePath</span>))
+    replacements.forEach(rewriter.replace)
+    <span class="synPreProc">let</span> <span class="synIdentifier">newContent</span> <span class="synIdentifier">=</span> rewriter.apply()
+    newContent.write(toFile<span class="synSpecial">:</span> <span class="synType">filePath</span>, atomically<span class="synSpecial">:</span> <span class="synType">true</span>, encoding<span class="synSpecial">:</span> .utf8)
+}
+</pre>
+
+
+<p>こんな感じでリネームできます。これは「ある変数がどこから参照されているか」という情報をIndexStoreが持っているのでサクッと実装できます。</p>
+
+<pre class="code lang-diff" data-lang="diff" data-unlink> class User {
+<span class="synSpecial">-    var name: String?</span>
+<span class="synIdentifier">+    var nickname: String?</span>
+ }
+
+ class ViewController: UIViewController {
+
+    let user = User()
+    override func viewDidLoad() {
+        super.viewDidLoad()
+
+<span class="synSpecial">-        user.name = &quot;Initial Name&quot;</span>
+<span class="synIdentifier">+        user.nickname = &quot;Initial Name&quot;</span>
+    }
+}
+</pre>
+
+
+<p>IndexStoreにどんな情報が入っているのか気になった方は、<a href="https://github.com/kateinoigakukun/swift-indexstore">swift-indexstore</a>をクローンして<code>index-dump-tool</code> コマンドにXcodeが生成するIndexStoreディレクトリを渡すと中身が見えて楽しいと思います。</p>
+
+<pre class="code lang-sh" data-lang="sh" data-unlink>$ git clone https://github.com/kateinoigakukun/swift-indexstore
+$ <span class="synStatement">cd</span> swift-indexstore
+$ swift run index-dump-tool print-record <span class="synSpecial">--index-store-path</span> ~/Library/Developer/Xcode/DerivedData/YourProject-XXXX/Index/DataStore 
+</pre>
+
+
+<p>これを使って便利なツールを作ってくれ〜</p>

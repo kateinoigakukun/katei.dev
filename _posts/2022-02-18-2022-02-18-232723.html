@@ -1,0 +1,52 @@
+---
+layout: post
+title: "muslでビルドするにはmusl.ccが便利"
+date: 2022-02-18 23:27:23 +0900
+language: ja
+source_url: https://kateinoigakukun.hatenablog.com/entry/2022/02/18/232723
+permalink: /blog/2022/02/18/232723/
+---
+
+<p><a href="https://github.com/webassembly/binaryen">Binaryen</a>のビルド済みwasm-optを使うとセグフォする現象に遭遇した時、ビルドを手元で再現するためにmuslを使う必要があったのでメモ。<sup id="fnref:1"><a href="#fn:1" rel="footnote">1</a></sup></p>
+
+<h2>musl libc</h2>
+
+<p>muslはlibcなので、コンパイラはgccのままsysrootを差し替えることで大体うまいことコンパイルできる。</p>
+
+<p>この設定をmusl-toolsパッケージのmusl-gccラッパーコマンドが勝手にやってくれるが、C++用のラッパーが用意されてなかったりスッとはビルドできない。あとツールチェインに入ってるSanitizer達がglibcを想定してビルドされてたり出来ないことが結構ある。</p>
+
+<p>なので、最初からmuslをターゲットとしてビルドされたツールチェインが欲しくなり、そこでビルド済みのmuslツールチェインを配布している<a href="https://musl.cc">musl.cc</a>が便利。<sup id="fnref:2"><a href="#fn:2" rel="footnote">2</a></sup></p>
+
+<pre class="code" data-lang="" data-unlink>$ curl -LO https://musl.cc/x86_64-linux-musl-native.tgz
+$ tar xfz x86_64-linux-musl-native.tgz
+$ tree -L 1 ./x86_64-linux-musl-native
+./x86_64-linux-musl-native
+|-- bin
+|-- include
+|-- lib
+|-- libexec
+|-- share
+|-- usr -&gt; .
+`-- x86_64-linux-musl
+</pre>
+
+
+<h2>CMakeで使う</h2>
+
+<p>musl.ccのツールチェインはsysrootをgccコマンドの相対で設定してくれるので、CMAKE_C_COMPILERさえ設定していれば、特に追加で指定する必要はない。</p>
+
+<pre class="code" data-lang="" data-unlink>cmake ../.. -G Ninja \
+  -DCMAKE_C_COMPILER=./x86_64-linux-musl-native/bin/gcc \
+  -DCMAKE_CXX_COMPILER=./x86_64-linux-musl-native/bin/g++</pre>
+
+
+
+<div class="footnotes">
+<hr/>
+<ol>
+<li id="fn:1">
+<p>これは結局muslのスレッドスタックサイズのデフォルト値がglibcよりかなり小さくてスタックオーバーフローしてただけだった <a href="https://github.com/WebAssembly/binaryen/issues/4401">https://github.com/WebAssembly/binaryen/issues/4401</a><a href="#fnref:1" rev="footnote">&#8617;</a></p></li>
+<li id="fn:2">
+<p>これはOfficialではないが<a href="https://github.com/openjdk/jdk/blob/master/doc/building.md">OpenJDKとかでも使われてる</a><a href="#fnref:2" rev="footnote">&#8617;</a></p></li>
+</ol>
+</div>

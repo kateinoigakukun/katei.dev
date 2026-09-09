@@ -1,0 +1,312 @@
+---
+layout: post
+title: "Effective Techniques in Swift Runtime Library"
+date: 2019-12-13 14:00:59 +0900
+language: en
+source_url: https://kateinoigakukun.hatenablog.com/entry/2019/12/13/140059
+permalink: /blog/2019/12/13/140059/
+---
+
+<p><a href="https://medium.com/@kateinoigakukun/effective-techniques-in-swift-runtime-library-492c6a97a475">en</a></p>
+
+<p>Swift言語のランタイムライブラリで使われているテクニックについて解説します。</p>
+
+<h2>ランタイムライブラリと実行可能ファイル</h2>
+
+<p>Swiftを実行するためにはswiftCoreというランタイムライブラリが必要です。意識することはあまりありませんが、静的もしくは動的に実行可能ファイルにリンクされています。</p>
+
+<p>Swift 5.0からABI安定が達成されたことで、macOS 10.14.4以降は<code>/usr/lib/swift/libswiftCore.dylib</code>にランタイムライブラリがインストールされています。</p>
+
+<p>SwiftのランタイムライブラリにはSwiftの動的な言語仕様をサポートするための関数が含まれています。</p>
+
+<h3>言語仕様の2つの側面</h3>
+
+<p>プログラミング言語の言語仕様を考えるとき、以下のような2つに分類できます。</p>
+
+<ol>
+<li>静的な言語仕様
+
+<ul>
+<li>文法</li>
+<li>型システム</li>
+</ul>
+</li>
+<li>動的な言語仕様
+
+<ul>
+<li>実行時型システム</li>
+<li>例外ハンドリング</li>
+<li>バイナリ互換性</li>
+</ul>
+</li>
+</ol>
+
+
+<p>ここでは、動的な言語仕様というのは実行時に使われる言語仕様のことを指します。Swiftの言語機能の中では以下のようなものが例として挙げられます。</p>
+
+<ul>
+<li>メモリ確保</li>
+<li>ARC</li>
+<li>実行時の型システム</li>
+<li>動的キャスト</li>
+</ul>
+
+
+<p>これらの言語機能は素朴なコンパイル時のコード生成ではコードサイズが肥大化してしまうため、ランタイムライブラリとして切り出されています。</p>
+
+<h3>メモリ確保</h3>
+
+<p>ランタイムライブラリの提供する言語機能の例としてメモリ確保の動きを見てみましょう。</p>
+
+<p>Swiftの構造体のように、静的に型のサイズが決定できる場合、コンパイラはそのサイズを確保するようなコードを出力します。</p>
+
+<p>この場合、<code>pet</code>変数はコンパイル時に<code>Pet</code>型からインスタンスサイズを24byteに決定できます。</p>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synComment">// 24 byte</span>
+<span class="synPreProc">struct</span> <span class="synType">Pet</span> {
+  <span class="synPreProc">let</span> <span class="synIdentifier">name</span><span class="synSpecial">:</span> <span class="synType">String</span> <span class="synComment">// 16 byte</span>
+  <span class="synPreProc">let</span> <span class="synIdentifier">age</span><span class="synSpecial">:</span> <span class="synType">Int</span>     <span class="synComment">// 8 byte</span>
+}
+
+<span class="synPreProc">let</span> <span class="synIdentifier">pet</span> <span class="synIdentifier">=</span> Pet(name<span class="synSpecial">:</span> <span class="synIdentifier">...</span>, age<span class="synSpecial">:</span> <span class="synIdentifier">...</span>) <span class="synComment">// malloc 24 byte</span>
+</pre>
+
+
+<p>一方で型から静的にサイズを決定できないケースもあります。例えばSwiftのクラス継承による動的な型の決定を想像してみましょう。</p>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synComment">// 8 byte</span>
+<span class="synPreProc">class</span> <span class="synType">View</span> {
+  <span class="synPreProc">var</span> <span class="synIdentifier">point</span><span class="synSpecial">:</span> (x<span class="synSpecial">:</span> <span class="synType">Float</span>, y<span class="synSpecial">:</span> <span class="synType">Float</span>) <span class="synComment">// 8 byte</span>
+  <span class="synStatement">required</span> <span class="synIdentifier">init</span>(<span class="synIdentifier">...</span>) { }
+
+  <span class="synPreProc">func</span> <span class="synIdentifier">copy</span>() <span class="synSpecial">-&gt;</span> <span class="synType">Self</span> {
+    <span class="synStatement">return</span> <span class="synIdentifier">Self</span>(<span class="synIdentifier">...</span>) <span class="synComment">// malloc n byte</span>
+  } 
+}
+
+<span class="synComment">// 24 byte</span>
+<span class="synPreProc">class</span> <span class="synType">TextView</span><span class="synSpecial">:</span> <span class="synType">View</span> {
+  <span class="synPreProc">var</span> <span class="synIdentifier">text</span><span class="synSpecial">:</span> <span class="synType">String</span> <span class="synComment">// 16 byte</span>
+  <span class="synStatement">required</span> <span class="synIdentifier">init</span>(<span class="synIdentifier">...</span>) { }
+}
+
+<span class="synPreProc">let</span> <span class="synIdentifier">view</span><span class="synSpecial">:</span> <span class="synType">View</span> <span class="synIdentifier">=</span> TextView(<span class="synIdentifier">...</span>)
+
+<span class="synComment">// この時点でviewがTextViewであることを保証できない。</span>
+<span class="synPreProc">let</span> <span class="synIdentifier">anotherView</span><span class="synSpecial">:</span> <span class="synType">View</span> <span class="synIdentifier">=</span> view.copy()
+</pre>
+
+
+<p>この例では<code>View</code>型は<code>copy</code>メソッドを実装しており、 <code>Self</code>型からインスタンスを生成します。 <code>Self</code>型は<code>View</code>型または<code>TextView</code>型になり得ますが、コンパイラはどちらの型が実行時に使われるか静的に決定できません。</p>
+
+<p>このような <code>Self</code>を使ったコードを正しく実行するためには、実行時にインスタンスの本来の型情報をインスタンス自身が取り回さなければなりません。</p>
+
+<h2>Metadata</h2>
+
+<p>実行時に取り回される型情報をSwiftではType Metadataと呼びます。基本的にSwiftユーザーからは見えないようになっており、直接使うこともありません。</p>
+
+<p>Type Metadataは型のサイズや動的なメソッド呼び出しのための関数テーブル、ジェネリック型パラメータのメタデータ、後述するType Descriptorへのポインタなどを保持しています。</p>
+
+<p>ランタイムライブラリは主にMetadataを操作することで動的な言語機能を実装しています。メモリ確保の例では、インスタンスに埋め込まれたType Metadataを取り出してランタイム関数に引数として渡すことで、動的にインスタンスのサイズを決定できるようになっています。</p>
+
+<p>Type Descriptorはジェネリックな型パラメータなどに影響されない、特定の型インスタンスから独立した情報のみを保持しています。また、リフレクションのための情報もここに含まれています。</p>
+
+<p>ジェネリックな型のType Metadataは実際にその型が使われた実行時のタイミングで、型パラメータ毎それぞれ動的に作られるケースがあります。
+しかしType MetadataとType Descriptorの二段の構造を取ることで、常に同一のType Descriptorデータを使い回すことができ、メモリを節約しています。</p>
+
+<h2>テクニックの背景</h2>
+
+<p>データ構造について見ていく前に前提となる背景を軽く話します。</p>
+
+<h3>TEXTセグメント</h3>
+
+<p>まず、メタデータがどのようにバイナリに格納されているかについてです。</p>
+
+<p>ここではmacOSで使われているMach-O形式について書きます。他のバイナリファイルフォーマットでもさほど変わりません。</p>
+
+<p>基本的に実行可能ファイルは機械語を含むTEXTセグメントとグローバル変数を保持するDATAセグメントに分かれます。</p>
+
+<p>これらのセグメントの大きな違いとして書き込み権限の有無が挙げられます。TEXTセグメントは実行中読み出し専用で書き込み不可ですが、DATAセグメントは実行中に書き込みが可能です。</p>
+
+<p>TEXTセグメントの読み出し専用の性質は動的ライブラリを使う際やプロセスをforkする際に大きく役立ちます。同じ動的ライブラリを2つのプロセスでロードする時、素朴な発想では同じ動的ライブラリを2つメモリ空間に展開します。が、TEXTセグメントが読み出し専用であれば読み書き可能なDATAセグメントのみを重複して展開し、TEXTセグメントは同一のメモリ空間を共有できます。</p>
+
+<p>つまり、ライブラリの占めるTEXTセグメントの割合が多いほどメモリ空間の利用効率が向上します。</p>
+
+<p>SwiftはTEXTセグメントにできるだけメタデータを配置するために一工夫しています。</p>
+
+<h3>再配置</h3>
+
+<p>再配置は主にリンカがオブジェクトファイルをリンクするタイミングと、プログラムローダが実行可能ファイルをロードするタイミングの2回行われます。</p>
+
+<p>リンク時の再配置ではシンボル同士のアドレスの差や、セクションの先頭からのオフセットなど、実行前にわかる情報を反映します。</p>
+
+<p>また、ロード時の再配置ではプログラムの各部分で使われている絶対アドレスを実際のメモリ空間のアドレスに置換します。基本的に、プログラムが展開されるメモリ空間の先頭アドレスを各アドレスに足し合わせるだけです。</p>
+
+<h2>データ構造のテクニック</h2>
+
+<h3>Relative Pointer</h3>
+
+<p>Relative Pointerはポインタ自身のアドレスから対象のアドレスまでのオフセットを保持するポインタ形式です。Swiftのメタデータに含まれるポインタは全てこのRelative Pointer形式になっています。</p>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">struct</span> <span class="synType">RelativePointer</span><span class="synSpecial">&lt;Pointee&gt;</span> {
+    <span class="synPreProc">var</span> <span class="synIdentifier">offset</span><span class="synSpecial">:</span> <span class="synType">Int32</span>
+
+    <span class="synStatement">mutating</span> <span class="synPreProc">func</span> <span class="synIdentifier">pointee</span>() <span class="synSpecial">-&gt;</span> <span class="synType">Pointee</span> {
+        <span class="synStatement">return</span> withUnsafePointer(to<span class="synSpecial">:</span> <span class="synIdentifier">&amp;self</span>) { [offset] pointer <span class="synSpecial">-&gt;</span> <span class="synType">UnsafePointer</span><span class="synSpecial">&lt;Pointee&gt;</span> <span class="synStatement">in</span>
+            <span class="synPreProc">let</span> <span class="synIdentifier">rawPointer</span> <span class="synIdentifier">=</span> UnsafeRawPointer(pointer)
+            <span class="synPreProc">let</span> <span class="synIdentifier">advanced</span> <span class="synIdentifier">=</span> rawPointer.advanced(by<span class="synSpecial">:</span> <span class="synType">Int</span>(offset))
+            <span class="synStatement">return</span> advanced.assumingMemoryBound(to<span class="synSpecial">:</span> <span class="synType">Pointee.self</span>)
+        }.pointee
+    }
+}
+</pre>
+
+
+<p>通常のポインタの代わりにRelativePointerを使うメリットはいくつかあります。</p>
+
+<ol>
+<li>バイナリサイズの節約</li>
+<li>ロード時再配置を減らせる</li>
+<li>メタデータをTEXTセグメントに含められるようにできる</li>
+</ol>
+
+
+<p>上から1つづつ見ていきます。</p>
+
+<p>まず、Relative Pointerは二点間のアドレスの差を計算するリンカの再配置の仕組みを使っています。この再配置の結果は符号付き32bit整数におさまる、という前提で作られているため、通常のポインタが64bit消費するのに対し、Relative Pointerはその半分の32bitで表現できます。</p>
+
+<p>ロード時の再配置についてですが、前述したとおり、通常のポインタはロード時に再配置が発生するため、プログラムの起動までにオーバーヘッドが発生します。一方、二点間のアドレスの差の計算はリンク時に完了する再配置なので、ロード時のオーバーヘッドがありません。</p>
+
+<p>またロード時の再配置を無くすことによって、メタデータはロード時のデータの書き換えを抑制し、位置独立なデータとして扱うことができます。つまり、実行プログラム本体と同じようにTEXTセグメントに配置して、ほかのプロセスとメモリ空間を共有できるようになります。</p>
+
+<p>もちろんデリファレンス時にオフセットを足し合わせるオーバーヘッドが発生しますが、Swiftでは以上のメリットよりこのような手法を採用しています。</p>
+
+<h3>Indirect Pointer</h3>
+
+<p>ランタイムライブラリが扱うポインタにはRelative Pointerと組み合わせて、いくつかのテクニックが使われています。その1つの例がIndirect Pointerです。</p>
+
+<p>Indirect Pointerはアライメントによるアドレスの使われないbitを利用してGOT経由のポインタと通常のポインタを同一の型で表現するテクニックです。</p>
+
+<p>アライメントはプロセッサが効率的にデータを扱うために用いられるメモリ空間上のデータ配置規則です。例えば32bitの数値型はアドレスが4の倍数になるように配置されます。</p>
+
+<p>つまり、Int32が配置されるアドレスの下位2bitは必ず0になるわけです。また、Relative Pointer自身も32bit符号付き整数なので、差の数値の下位2bitも0で固定されます。そのため、ポインタの型さえ分かっていればこの下位数ビットは無駄になってしまいます。</p>
+
+<p>Swiftのランタイムライブラリはこの下位数ビットを使っていくつかの状態をポインタに保持しています。</p>
+
+<p>Indirect Pointerは下位1bitをGOTを経由するか否かを表現するために使っています。</p>
+
+<p>GOTを経由する場合はデリファレンスの際に2回デリファレンスします。</p>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">struct</span> <span class="synType">RelativeIndirectablePointer</span><span class="synSpecial">&lt;Pointee&gt;</span> <span class="synComment">/*  where alignof(Pointee) =&gt; 2 */</span> {
+    <span class="synPreProc">let</span> <span class="synIdentifier">offsetWithIndirectFlag</span><span class="synSpecial">:</span> <span class="synType">Int32</span>
+
+    <span class="synStatement">mutating</span> <span class="synPreProc">func</span> <span class="synIdentifier">pointee</span>() <span class="synSpecial">-&gt;</span> <span class="synType">Pointee</span> {
+        <span class="synPreProc">let</span> <span class="synIdentifier">offset</span><span class="synSpecial">:</span> <span class="synType">Int32</span>
+        <span class="synStatement">if</span> isIndirect {
+            offset <span class="synIdentifier">=</span> offsetWithIndirectFlag <span class="synIdentifier">&amp;</span> <span class="synIdentifier">~</span>isIndirectMask
+        } <span class="synStatement">else</span> {
+            offset <span class="synIdentifier">=</span> offsetWithIndirectFlag
+        }
+        <span class="synStatement">return</span> withUnsafePointer(to<span class="synSpecial">:</span> <span class="synIdentifier">&amp;self</span>) { pointer <span class="synSpecial">-&gt;</span> <span class="synType">UnsafePointer</span><span class="synSpecial">&lt;Pointee&gt;</span> <span class="synStatement">in</span>
+            <span class="synPreProc">let</span> <span class="synIdentifier">rawPointer</span> <span class="synIdentifier">=</span> UnsafeRawPointer(pointer)
+            <span class="synPreProc">let</span> <span class="synIdentifier">advanced</span> <span class="synIdentifier">=</span> rawPointer.advanced(by<span class="synSpecial">:</span> <span class="synType">Int</span>(offset))
+            <span class="synStatement">if</span> isIndirect {
+                <span class="synPreProc">let</span> <span class="synIdentifier">got</span> <span class="synIdentifier">=</span> advanced.assuimgMemoryBound(to<span class="synSpecial">:</span> <span class="synType">UnsafePointer</span><span class="synSpecial">&lt;Pointee&gt;</span>.<span class="synIdentifier">self</span>)
+                <span class="synStatement">return</span> got.assumingMemoryBound(to<span class="synSpecial">:</span> <span class="synType">Pointee.self</span>)
+            } <span class="synStatement">else</span> {
+                <span class="synStatement">return</span> advanced.assumingMemoryBound(to<span class="synSpecial">:</span> <span class="synType">Pointee.self</span>)
+            }
+        }.pointee
+    }
+
+    <span class="synPreProc">var</span> <span class="synIdentifier">isIndirect</span><span class="synSpecial">:</span> <span class="synType">Bool</span> {
+        offsetWithIndirectFlag <span class="synIdentifier">&amp;</span> isIndirectMask <span class="synIdentifier">!=</span> <span class="synConstant">0</span>
+    }
+
+    <span class="synPreProc">var</span> <span class="synIdentifier">isIndirectMask</span><span class="synSpecial">:</span> <span class="synType">Int32</span> { <span class="synConstant">0x01</span> }
+}
+</pre>
+
+
+<h3>Int Paired Pointer</h3>
+
+<p>また、使われない下位ビットをそのまま数値として取り出すポインタもあります。</p>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">struct</span> <span class="synType">RelativeDirectPointerIntPair</span><span class="synSpecial">&lt;Pointee, IntTy: BinaryInteger&gt;</span>
+    <span class="synComment">/*  where alignof(Pointee) =&gt; 2 */</span>
+{
+    <span class="synPreProc">let</span> <span class="synIdentifier">offsetWithInt</span><span class="synSpecial">:</span> <span class="synType">Int32</span>
+
+    <span class="synStatement">mutating</span> <span class="synPreProc">func</span> <span class="synIdentifier">pointee</span>() <span class="synSpecial">-&gt;</span> <span class="synType">Pointee</span> {
+        <span class="synPreProc">let</span> <span class="synIdentifier">offset</span> <span class="synIdentifier">=</span> offsetWithInt <span class="synIdentifier">&amp;</span> <span class="synIdentifier">~</span>intMask
+        <span class="synStatement">return</span> withUnsafePointer(to<span class="synSpecial">:</span> <span class="synIdentifier">&amp;self</span>) { pointer <span class="synSpecial">-&gt;</span> <span class="synType">UnsafePointer</span><span class="synSpecial">&lt;Pointee&gt;</span> <span class="synStatement">in</span>
+            <span class="synPreProc">let</span> <span class="synIdentifier">rawPointer</span> <span class="synIdentifier">=</span> UnsafeRawPointer(pointer)
+            <span class="synPreProc">let</span> <span class="synIdentifier">advanced</span> <span class="synIdentifier">=</span> rawPointer.advanced(by<span class="synSpecial">:</span> <span class="synType">Int</span>(offset))
+            <span class="synStatement">return</span> advanced.assumingMemoryBound(to<span class="synSpecial">:</span> <span class="synType">Pointee.self</span>)
+        }.pointee
+    }
+
+    <span class="synPreProc">var</span> <span class="synIdentifier">value</span><span class="synSpecial">:</span> <span class="synType">IntTy</span> {
+        IntTy(offsetWithInt <span class="synIdentifier">&amp;</span> intMask)
+    }
+
+    <span class="synPreProc">var</span> <span class="synIdentifier">intMask</span><span class="synSpecial">:</span> <span class="synType">Int32</span> {
+        Int32(
+            min(
+                MemoryLayout<span class="synIdentifier">&lt;</span>Pointee<span class="synIdentifier">&gt;</span>.alignment,
+                MemoryLayout<span class="synIdentifier">&lt;</span>Int32<span class="synIdentifier">&gt;</span>.alignment
+            ) <span class="synIdentifier">-</span> <span class="synConstant">1</span>
+        )
+    }
+}
+</pre>
+
+
+<p>IndirectableとInt Pairedを組み合わせた型もあり、この場合、Indirectか否かを1bit、もう1bitを値として取り出せるようになっています。</p>
+
+<h3>Symbolic Reference</h3>
+
+<p>Symbolic Referenceはマングリングの種類の1つとして使われています。</p>
+
+<p>通常、型名からメタデータを取得する場合、マングルされた文字列をデマングルしてメタデータを探索します。しかし、対象のオブジェクトがモジュール内に存在する場合、マングルされた名前を介することなく直接参照した方が効率的です。</p>
+
+<p>通常のマングリングは対象のオブジェクトを一意に示す文字列表現ですが、Symbolic Referenceは文字列の一部に対象オブジェクトのアドレスを直接埋め込みます。</p>
+
+<p>Symbolic Referenceは通常のマングルされた文字列と区別するために先頭が制御文字で始まっており、0x01~0x0CまではSymbolic Referenceのために確保されています。</p>
+
+<p>制御文字のあとには4byteのRelative Pointerが埋め込まれており、ランタイムライブラリでデコードされます。</p>
+
+<p>この仕組みにより、モジュール内に定義されたメタデータの参照はほぼコスト無しに行えます。</p>
+
+<h3>__swift_instantiateConcreteTypeFromMangledName</h3>
+
+<p>この関数は型名からメタデータを取得するために使われます。引数にはこの関数の結果をキャッシュするための <code>{ i32, i32 }</code>の構造が渡ってきます。</p>
+
+<p>擬似C++で表現するとこんな感じです。</p>
+
+<pre class="code lang-cpp" data-lang="cpp" data-unlink><span class="synType">union</span> Input {
+  <span class="synType">struct</span> {
+    RelativePointer&lt;CChar&gt; typeName;               <span class="synComment">// 4byte</span>
+    <span class="synType">int32_t</span>                negativeTypeNameLength; <span class="synComment">// 4byte</span>
+  } nonCached;
+  
+  TypeMetadata *cached; <span class="synComment">// 8 byte</span>
+}
+</pre>
+
+
+<p>キャッシュオブジェクトの状態はキャッシュなしとキャッシュ済みの2つあり、それぞれ64bitの使い方が変わってきます。エンディアンによってレイアウトが変わるので、ひとまずリトルエンディアンを仮定して話を進めます。</p>
+
+<p>キャッシュなしの状態では、最初の32bitには型名へのRelative Pointer、後ろの32bitには型名の長さが負号をつけて配置されます。型名はSymbolic Referenceになりうるため、アドレスの一部としてnull文字が入り込む場合があります。そのためnull文字をターミネータとして使えないため、型名の長さが必要になります。</p>
+
+<p>キャッシュありの状態では、64bit全体をキャッシュしたメタデータへの絶対ポインタがそのまま入っています。</p>
+
+<p>この2つの状態はキャッシュオブジェクトを符号付き64bit整数として見た時、負数であればキャッシュなし、正数であればキャッシュあり、として区別できます。これはキャッシュなしの状態で後方32bitに型名の長さを負号をつけて保存したために、64bit全体を符号付き整数として見ると必ず負数になることを利用しています。また、単純に後方32bitの符号を比較するより64bit全体を見るほうが効率的な命令数になります。</p>
+
+<h2>まとめ</h2>
+
+<p>この様にランタイムライブラリではメモリ空間を最大限に活用するためのテクニックが多く詰まっています。一方でRelative Pointerを前提に組まれた構造がほとんどなので、32bit以上のポインタサイズをサポートしようとすると、ランタイム構造体の調整が必要になってきます。この調整をする場合、コンパイラが出力するメタデータのレイアウトとランタイムライブラリの想定するレイアウトを同期する必要がありますが、現状の実装では特に同期のための仕組みがあるわけではなく、全てのレイアウトを手動で調整する必要があります。</p>
+
+<p>これはSwiftの移植性に大きく関わってくるため、メタデータのレイアウトを一元的に管理する何かしらの仕組みが必要です。例えば、コンパイラが出力したLLVM IRからランタイムライブラリ用のCの構造体を生成するようなコードジェネレータがあれば解決できるかもしれません。（SwiftのメタデータはTrailingObjectsによって可変長なレイアウトを持つため難しいかもしれませんが。）</p>
+
+<p>LLVMはコンパイラ実装の基盤として大きな役割を果たしていますが、ランタイムライブラリとコンパイラの間のインターフェイス定義をサポートするようなライブラリはあまり見たことがありません。そのようなレイヤーの技術が充実してくればもっと多くの言語がABI安定を達成できるような世界になるかもしれませんね。</p>

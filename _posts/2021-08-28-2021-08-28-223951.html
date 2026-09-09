@@ -1,0 +1,115 @@
+---
+layout: post
+title: "Auto-linkingまとめ"
+date: 2021-08-28 22:39:51 +0900
+language: ja
+source_url: https://kateinoigakukun.hatenablog.com/entry/2021/08/28/223951
+permalink: /blog/2021/08/28/223951/
+---
+
+<h2>Auto-linkingとは</h2>
+
+<p>Auto-linkingとは、コンパイラが出力したオブジェクトファイルからリンク対象のライブラリを自動的に決定する仕組みです。
+通常、ユーザはリンカのコマンドライン引数に <code>-lm</code> のようにリンクするライブラリを指定しますが、Auto-linkingをサポートするコンパイラとリンカを使う場合、以下のようなC言語の <code>#pragma</code> コメントを記述することで、リンカオプションを指定をせずに、リンカにライブラリを伝えることができます。</p>
+
+<pre class="code lang-c" data-lang="c" data-unlink><span class="synPreProc">#include </span><span class="synConstant">&lt;math.h&gt;</span>
+<span class="synPreProc">#include </span><span class="synConstant">&lt;stdio.h&gt;</span>
+
+<span class="synPreProc">#pragma comment(lib, </span><span class="synConstant">&quot;m&quot;</span><span class="synPreProc">)</span>
+
+<span class="synType">int</span> main(<span class="synType">void</span>) {
+  printf(<span class="synConstant">&quot;PI = </span><span class="synSpecial">%f\n</span><span class="synConstant">&quot;</span>, atan(<span class="synConstant">1</span>) * <span class="synConstant">4</span>);
+  <span class="synStatement">return</span> <span class="synConstant">0</span>;
+}
+</pre>
+
+
+<p>コンパイルの様子</p>
+
+<pre class="code bash" data-lang="bash" data-unlink># -lmの指定無しでリンクが成功する
+$ clang main.c -fuse-ld=lld
+$ ./a.out
+PI = 3.141593</pre>
+
+
+<p><a href="https://en.wikipedia.org/wiki/Auto-linking">Auto-linking - Wikipedia</a></p>
+
+<p>リンカオプションを指定する必要が無くなることで、ユーザの負担が減るだけでなく、ビルドシステム中のオプション伝播が単純化されます。嬉しいですね。</p>
+
+<p>この記事ではオブジェクトファイル形式ごとのAuto-linkingの実装状況と、LLVMにおけるサポートについて解説します。</p>
+
+<p>（完全に理解したがしばらくして忘れて調べ直す、を何回かやったのでいい加減文字に起こすことにした）</p>
+
+<h2>オブジェクトファイル形式ごとの仕組み</h2>
+
+<p>上で紹介した <code>#pragma comment(lib, "...")</code> はIBMコンパイラ、MSVC、Clangが提供しているディレクティブです。（他にもサポートしてるコンパイラはあるかも）
+MSVCはCOFF、ClangはELF、Mach-O、COFF向けにこの機能を実装しています。</p>
+
+<ul>
+<li><a href="https://docs.microsoft.com/en-us/cpp/preprocessor/comment-c-cpp?redirectedfrom=MSDN&amp;view=msvc-160#lib">comment pragma | Microsoft Docs</a></li>
+<li><a href="https://clang.llvm.org/docs/UsersManual.html#microsoft-extensions">Clang Compiler User’s Manual: Microsoft extensions</a></li>
+</ul>
+
+
+<h3>COFF</h3>
+
+<p>MSVCが出力するオブジェクトファイル形式COFFには、リンカオプションを格納する<code>.drectve</code> セクションがあります。このセクションはオブジェクトファイルのみでサポートされており、通常のセクションとは異なり、最終的な実行可能ファイルには含まれません。</p>
+
+<p>コンパイラは <code>#pragma comment(lib, "...")</code> からリンカオプションを生成し、オブジェクトファイルの<code>.drectve</code>セクションに埋め込むことで、link.exeコマンドにリンクするライブラリを伝えています。</p>
+
+<p><a href="https://docs.microsoft.com/en-us/windows/win32/debug/pe-format#the-drectve-section-object-only">PE Format - Win32 apps | Microsoft Docs: The .drectve Section (Object Only)</a></p>
+
+<h3>ELF</h3>
+
+<p>ELFにはCOFFのような仕様として定義されたリンカオプション用セクションはありません。
+その代わりに、LLVMがClangとlldの間のコンベンションとして特殊なセクションを定義しています。
+そのため、Clangで<code>#pragma comment(lib, "...")</code>をコンパイルしたとしても、goldやGNU ldでリンクする場合オプションが伝わりません。</p>
+
+<p>LLVMの実際の実装については後述します。</p>
+
+<h3>Mach-O</h3>
+
+<p>Mach-Oオブジェクトファイルには、ヘッダの後ろにLoad Command呼ばれる構造体列が配置されており、セクションやセグメントなどのレイアウト、動作に必要なOSバージョンなど、リンカやプログラムローダに伝える情報が格納されています。このLoad Commandの一つに、 <code>LC_LINKER_OPTION</code> があり、その名の通りリンカオプションをリンカに伝えてくれます。</p>
+
+<p>このあたりの情報は明確なドキュメントを見つけられておらず、実装を追って分かったことなので、Mach-Oの規約として定義されているものなのかは分かりません。（もしドキュメントの在り処をご存じの方がいれば教えて下さい）</p>
+
+<p>リンカ（ld64）側の実装はこのあたりにあります。 <a href="https://opensource.apple.com/source/ld64/ld64-609/src/ld/parsers/macho_relocatable_file.cpp">macho_relocatable_file.cpp</a></p>
+
+<h2>LLVMにおけるAuto-linking</h2>
+
+<p>さて、LLVMにはAuto-linkingを実現するための機能が歴史的経緯により2つあります。どちらもLLVM IR上のモジュールメタデータとして表現されており、コンパイラがLLVM IRを生成する際に指定します。</p>
+
+<p>1つ目は、<code>llvm.linker.options</code> です。</p>
+
+<p>このメタデータは、COFFでは<code>.drectve</code>、Mach-Oでは<code>LC_LINKER_OPTION</code>に降下します。
+一応ELFでも <code>SHT_LLVM_LINKER_OPTIONS</code> という特別なセクションにリンカオプションが埋め込まれるようにコード生成されますが、なんと肝心のlld側が対応していません。
+他のオブジェクトファイルの形式と違い、任意のリンカオプションを受け付けるのではなく、オプションのセマンティクスを明示的にしたKey-Valueペアで表現するため、
+コンパイラフロントエンドがELF向けに特別な処理を入れる必要があります。</p>
+
+<p>SwiftのWindowsポートで有名なcompnerdさんが2018年に提案して、ClangフロントエンドとLLVMバックエンドの実装をしましたが、その後アップデートが無いようです。</p>
+
+<ul>
+<li><a href="https://llvm.org/docs/LangRef.html#automatic-linker-flags-named-metadata">LLVM Language Reference Manual: Automatic Linker Flags Named Metadata</a></li>
+<li><a href="https://lists.llvm.org/pipermail/llvm-dev/2018-January/120101.html">[llvm-dev] Linker Option support for ELF</a></li>
+</ul>
+
+
+<p>2つ目は <code>llvm.dependent-libraries</code>です。</p>
+
+<p><code>llvm.linker.options</code>のELFサポートが難航している状態に対して、SonyのPlay Station向けツールチェイン開発者の方が新しく導入したメタデータです。
+これは、ELFのみをサポートしており、 リンクするライブラリ名の配列を受け付け、オブジェクトファイルの<code>SHT_LLVM_DEPENDENT_LIBRARIES</code> というセクションに埋め込みます。
+こちらはClang、LLVMバックエンド、リンカの実装が完了しています。現在のClangは<code>#pragma comment(lib, "...")</code>をELFの場合のみ、<code>llvm.linker.options</code>を使う実装になっています。</p>
+
+<ul>
+<li><a href="https://llvm.org/docs/LangRef.html#dependent-libs-named-metadata">LLVM Language Reference Manual: Dependent Libs Named Metadata</a></li>
+<li><a href="https://lists.llvm.org/pipermail/llvm-dev/2019-March/131004.html">[llvm-dev] RFC: ELF Autolinking</a></li>
+</ul>
+
+
+<h2>まとめ</h2>
+
+<p>大変</p>
+
+<h2>参考図書</h2>
+
+<p><div class="hatena-asin-detail"><a href="https://www.amazon.co.jp/exec/obidos/ASIN/4274064379/hatena-blog-22/" class="hatena-asin-detail-image-link" target="_blank" rel="noopener"><img src="https://m.media-amazon.com/images/I/51F8V0Y5N6L._SL500_.jpg" class="hatena-asin-detail-image" alt="Linkers &amp; Loaders" title="Linkers &amp; Loaders"></a><div class="hatena-asin-detail-info"><p class="hatena-asin-detail-title"><a href="https://www.amazon.co.jp/exec/obidos/ASIN/4274064379/hatena-blog-22/" target="_blank" rel="noopener">Linkers &amp; Loaders</a></p><ul class="hatena-asin-detail-meta"><li><span class="hatena-asin-detail-label">作者:</span>JohnR. Levine</li><li>オーム社</li></ul><a href="https://www.amazon.co.jp/exec/obidos/ASIN/4274064379/hatena-blog-22/" class="asin-detail-buy" target="_blank" rel="noopener">Amazon</a></div></div></p>

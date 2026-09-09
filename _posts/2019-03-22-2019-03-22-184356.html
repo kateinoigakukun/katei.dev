@@ -1,0 +1,407 @@
+---
+layout: post
+title: "Swift Type Metadata (en)"
+date: 2019-03-22 18:43:56 +0900
+language: en
+source_url: https://kateinoigakukun.hatenablog.com/entry/2019/03/22/184356
+permalink: /blog/2019/03/22/184356/
+---
+
+<script async class="speakerdeck-embed" data-id="c969176dbb024e69abc7535bebaf43e4" data-ratio="1.77777777777778" src="//speakerdeck.com/assets/embed.js"></script>
+
+
+<p><iframe width="480" height="270" src="https://www.youtube.com/embed/2fon4YFI9Ao?feature=oembed" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe><cite class="hatena-citation"><a href="https://www.youtube.com/watch?v=2fon4YFI9Ao">www.youtube.com</a></cite></p>
+
+<p>try! Swift 2019</p>
+
+<p>I'm kateinoigakukun, working at Mercari as an intern.
+Today, I'll talk about Metadata which is one of the most important things to understand how Swift works.</p>
+
+<p><span itemscope itemtype="http://schema.org/Photograph"><a href="http://f.hatena.ne.jp/kateinoigaku/20190322173349" class="hatena-fotolife" itemprop="url"><img src="https://cdn-ak.f.st-hatena.com/images/fotolife/k/kateinoigaku/20190322/20190322173349.jpg" alt="f:id:kateinoigaku:20190322173349j:image" title="f:id:kateinoigaku:20190322173349j:image" class="hatena-fotolife" itemprop="image"></a></span></p>
+
+<p>Swift is well-known for being a statically-typed language, but it actually has many dynamic things on runtime.</p>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">let</span> <span class="synIdentifier">typeName</span> <span class="synIdentifier">=</span> String(describing<span class="synSpecial">:</span> <span class="synType">Int.self</span>)
+</pre>
+
+
+<p>I'm sure all of you have looked at StackOverflow and written code like this to get a type name.</p>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">extension</span> <span class="synType">UITableView</span> {
+    <span class="synPreProc">func</span> <span class="synIdentifier">register</span><span class="synSpecial">&lt;Cell&gt;</span>(nibWithCellClass<span class="synSpecial">:</span> <span class="synType">Cell.Type</span>) <span class="synStatement">where</span> Cell<span class="synSpecial">:</span> <span class="synType">UITableViewCell</span> {
+        <span class="synPreProc">let</span> <span class="synIdentifier">typeName</span> <span class="synIdentifier">=</span> String(describing<span class="synSpecial">:</span> <span class="synType">Cell.self</span>)
+        <span class="synPreProc">let</span> <span class="synIdentifier">nib</span> <span class="synIdentifier">=</span> UINib(nibName<span class="synSpecial">:</span> <span class="synType">typeName</span>, bundle<span class="synSpecial">:</span> <span class="synType">Bundle.main</span>)
+        register(nib, forCellReuseIdentifier<span class="synSpecial">:</span> <span class="synType">typeName</span>)
+    }
+}
+
+tableView.register(nibWithCellClass<span class="synSpecial">:</span> <span class="synType">TweetCell.self</span>)
+</pre>
+
+
+<p>For example, when you call register method for <code>UITableViewCell</code>, you use this to match the xib name and type name. It's useful extension. But have you ever thought about how this code works on runtime?
+This is your first step towards thinking about memory representation in Swift. Let's dig into the world of metadata!</p>
+
+<h2>Agenda</h2>
+
+<ol>
+<li>What is type metadata?</li>
+<li>Explore <code>String(describing: Int.self)</code></li>
+<li>How to use metadata in Swift</li>
+<li>Use cases in OSS</li>
+</ol>
+
+
+<p>First, I'll explain "What is type metadata". Swift type metadata is not something we are familiar with. But we usually get the benefits of it, because Core features of Swift use it for dynamic behavior. I'll explain the example of the <code>String</code> initializer and talk about how type metadata is used inside of Swift. Then I'll introduce how to use metadata in Swift and some examples of hacking Swift.</p>
+
+<h2>What is type metadata?</h2>
+
+<ul>
+<li>Type information in Swift runtime</li>
+<li>Used in Swift internal dynamic behavior</li>
+<li>Metatype is pointer to metadata</li>
+</ul>
+
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">let</span> <span class="synIdentifier">metatype</span><span class="synSpecial">:</span> <span class="synType">Int.Type</span> <span class="synIdentifier">=</span> Int.<span class="synIdentifier">self</span>
+</pre>
+
+
+<p>Let's start. Type metadata is Swift's internal information about types like instance size, number of cases of enum, and so on. This information is stored statically in binary or generated dynamically in runtime. Metatype is represented as type name plus <code>self</code> keyword and the actual value is a pointer to the metadata.</p>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">extension</span> <span class="synType">String</span> {
+
+  <span class="synPreProc">public</span> <span class="synIdentifier">init</span><span class="synSpecial">&lt;Subject: CustomStringConvertible&gt;</span>(describing instance<span class="synSpecial">:</span> <span class="synType">Subject</span>) { <span class="synIdentifier">...</span> }
+
+  <span class="synPreProc">public</span> <span class="synIdentifier">init</span><span class="synSpecial">&lt;Subject&gt;</span>(describing instance<span class="synSpecial">:</span> <span class="synType">Subject</span>) { <span class="synIdentifier">...</span> }
+
+}
+
+<span class="synPreProc">let</span> <span class="synIdentifier">typeName</span> <span class="synIdentifier">=</span> String(describing<span class="synSpecial">:</span> <span class="synType">Int.self</span>) <span class="synComment">// &quot;Int&quot;</span>
+</pre>
+
+
+<p><code>Int.self</code> is a metatype object and it is passed to the <code>String</code> initializer. This initializer accepts any type of value, and returns the <code>description</code> property if the type of the value conforms to <code>CustomStringConvertible</code> and returns the type name if a metatype is passed in.</p>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">extension</span> <span class="synType">Int.Type</span><span class="synSpecial">:</span> <span class="synType">CustomStringConvertible</span> { <span class="synComment">// 🚫 Cannot extend a metatype 'Int.Type'</span>
+    <span class="synPreProc">var</span> <span class="synIdentifier">description</span><span class="synSpecial">:</span> <span class="synType">String</span> {
+        <span class="synStatement">return</span> <span class="synConstant">&quot;Int&quot;</span>
+    }
+}
+</pre>
+
+
+<p>It can not be true that metatype implements the <code>description</code> property of <code>CustomStringConvertible</code> because there is no way to extend metatype. And it seems impossible to implement with the pure Swift API because Swift doesn’t have a runtime API like Objective-C. So there should be some magic.</p>
+
+<h3>SwiftCore</h3>
+
+<ul>
+<li>Swift standard library</li>
+<li>Fundamental types and interfaces</li>
+</ul>
+
+
+<h3>SwiftRuntime</h3>
+
+<ul>
+<li>Swift runtime library</li>
+<li>Dynamic behavior</li>
+</ul>
+
+
+<p>The initializer is implemented in <code>SwiftCore</code> and the magic is implemented in <code>SwiftRuntime</code>. <code>SwiftCore</code> is Swift standard library written in Swift and contains fundamental data types like <code>String</code> and <code>Int</code> and protocols. <code>SwiftRuntime</code> is the Swift runtime library written in C++ and contains runtime behavior. Many dynamic features like <code>dynamic casting</code> and <code>allocating instances</code> are implemented in this library.</p>
+
+<h3>stdlib/public/core/Mirror.swift</h3>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">struct</span> <span class="synType">String</span> {
+  <span class="synPreProc">public</span> <span class="synIdentifier">init</span><span class="synSpecial">&lt;Subject&gt;</span>(describing instance<span class="synSpecial">:</span> <span class="synType">Subject</span>) {
+    _print_unlocked(instance, <span class="synIdentifier">&amp;self</span>)
+  }
+}
+</pre>
+
+
+<p>Swift is open source, so we can see this on Github. In this initializer, the <code>print_unlocked</code> which is internal function is called.</p>
+
+<h3>stdlib/public/core/Misc.swift</h3>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">public</span> <span class="synPreProc">func</span> <span class="synIdentifier">_typeName</span>(_ type<span class="synSpecial">:</span> <span class="synType">Any.Type</span>, qualified<span class="synSpecial">:</span> <span class="synType">Bool</span> <span class="synIdentifier">=</span> <span class="synConstant">true</span>) <span class="synSpecial">-&gt;</span> <span class="synType">String</span> {
+  <span class="synPreProc">let</span> (stringPtr, count) <span class="synIdentifier">=</span> _getTypeName(type, qualified<span class="synSpecial">:</span> <span class="synType">qualified</span>)
+  <span class="synStatement">return</span> String._fromUTF8Repairing(
+    UnsafeBufferPointer(start<span class="synSpecial">:</span> <span class="synType">stringPtr</span>, count<span class="synSpecial">:</span> <span class="synType">count</span>)).<span class="synConstant">0</span>
+}
+
+<span class="synType">@_silgen_name</span>(<span class="synConstant">&quot;swift_getTypeName&quot;</span>)
+<span class="synPreProc">public</span> <span class="synPreProc">func</span> <span class="synIdentifier">_getTypeName</span>(_ type<span class="synSpecial">:</span> <span class="synType">Any.Type</span>, qualified<span class="synSpecial">:</span> <span class="synType">Bool</span>) <span class="synSpecial">-&gt;</span> (UnsafePointer<span class="synIdentifier">&lt;</span>UInt8<span class="synIdentifier">&gt;</span>, Int)
+</pre>
+
+
+<p>Digging into the call stack for the case when type of argument is metatype, the <code>_typeName</code> function is called,
+and calls another function <code>_getTypeName</code>. Look at the <code>_getTypeName</code> definition.
+First, you can see that the function has <code>@_silgen_name</code> attribute and doesn't have body code. What’s this? This <code>@_silgen_name</code> attribute specifies the function name that the declaration will have at link time. In this use case, this definition is used to link to a function in <code>SwiftRuntime</code>. I'll skip the details of the linked function, but it simply extracts the type name from the metadata.
+Then, how is metadata represented in the memory world?</p>
+
+<p><span itemscope itemtype="http://schema.org/Photograph"><a href="http://f.hatena.ne.jp/kateinoigaku/20190322173606" class="hatena-fotolife" itemprop="url"><img src="https://cdn-ak.f.st-hatena.com/images/fotolife/k/kateinoigaku/20190322/20190322173606.jpg" alt="f:id:kateinoigaku:20190322173606j:image" title="f:id:kateinoigaku:20190322173606j:image" class="hatena-fotolife" itemprop="image"></a></span></p>
+
+<p>As you can see in the figure, metadata is broken down and represented as
+- Value witness table which is a group of functions for manipulating instance</p>
+
+<ul>
+<li>a kind value which represents the kind of type such as class, struct, protocol, etc,</li>
+<li>and NominalTypeDescriptor which records detailed information of the type.</li>
+<li>In the case of a class, VTable is also included,</li>
+<li>and in the case of a generic type, type parameters are embedded dynamically.</li>
+</ul>
+
+
+<p>So, in the NominalTypeDescriptor there is the type name we are looking for.
+We can get the type name from the nominal type descriptor by just advancing the metadata pointer. It seems not difficult to implement, so let's reproduce the String initializer in <code>SwiftRuntime</code>.
+(docs/ABI/TypeMetadata.rst)</p>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">struct</span> <span class="synType">StructMetadata</span> {
+    <span class="synPreProc">let</span> <span class="synIdentifier">kind</span><span class="synSpecial">:</span> <span class="synType">Int</span>
+    <span class="synPreProc">let</span> <span class="synIdentifier">typeDescriptor</span><span class="synSpecial">:</span> <span class="synType">UnsafePointer</span><span class="synSpecial">&lt;StructTypeDescriptor&gt;</span>
+}
+
+<span class="synPreProc">struct</span> <span class="synType">StructTypeDescriptor</span> {
+    <span class="synPreProc">let</span> <span class="synIdentifier">flags</span><span class="synSpecial">:</span> <span class="synType">Int32</span>
+    <span class="synPreProc">let</span> <span class="synIdentifier">parent</span><span class="synSpecial">:</span> <span class="synType">Int32</span>
+    <span class="synPreProc">let</span> <span class="synIdentifier">name</span><span class="synSpecial">:</span> <span class="synType">RelativePointer</span><span class="synSpecial">&lt;CChar&gt;</span>
+}
+</pre>
+
+
+<p>In the first step, reproduce the memory layout as a struct. Most information about the memory layout is documented but a part of it is already outdated, so we need to read the source code of swift compiler sometimes. To simplify this example, I will only implement for structs.
+Then, we need to understand <code>RelativePointer</code> to reproduce the memory layout.</p>
+
+<p><span itemscope itemtype="http://schema.org/Photograph"><a href="http://f.hatena.ne.jp/kateinoigaku/20190322173737" class="hatena-fotolife" itemprop="url"><img src="https://cdn-ak.f.st-hatena.com/images/fotolife/k/kateinoigaku/20190322/20190322173737.jpg" alt="f:id:kateinoigaku:20190322173737j:image" title="f:id:kateinoigaku:20190322173737j:image" class="hatena-fotolife" itemprop="image"></a></span></p>
+
+<p>(include/swift/Basic/RelativePointer.h)</p>
+
+<p><code>RelativePointer</code> is not just a pointer. A basic absolute pointer has the address to the referent, but relative pointer has the offset from its own address to the referent's address. It works by just reading the offset and advancing from its own address. Using <code>RelativePointer</code> instead of an absolute pointer reduces relocation.</p>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">func</span> <span class="synIdentifier">getTypeName</span><span class="synSpecial">&lt;Subject&gt;</span>(of type<span class="synSpecial">:</span> <span class="synType">Subject.Type</span>) <span class="synSpecial">-&gt;</span> <span class="synType">String</span> {
+    <span class="synPreProc">let</span> <span class="synIdentifier">metadataPointer</span> <span class="synIdentifier">=</span> unsafeBitCast(
+        type, to<span class="synSpecial">:</span> <span class="synType">UnsafePointer</span><span class="synSpecial">&lt;StructTypeMetadata&gt;</span>.<span class="synIdentifier">self</span>
+    )
+    <span class="synPreProc">let</span> <span class="synIdentifier">namePointer</span><span class="synSpecial">:</span> <span class="synType">UnsafePointer</span><span class="synSpecial">&lt;CChar&gt;</span> <span class="synIdentifier">=</span> metadataPointer.pointee
+                        .typeDescriptor.pointee
+                        .name.advancedPointer()
+    <span class="synStatement">return</span> String(cString<span class="synSpecial">:</span> <span class="synType">namePointer</span>)
+}
+</pre>
+
+
+<p>Then, we finished preparing, so let's extract the type name.
+First, cast the metatype object into the pointer of metadata. But in Swift's type system, metatype doesn't have subtyping relation with metadata pointer, so use <code>unsafeBitCast</code> to cast the metatype.
+Access the name pointer through the type descriptor and advance the offset to be an absolute <code>CChar</code> pointer.
+Next convert this to a Swift String. Then, the implementation has been completed!</p>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">let</span> <span class="synIdentifier">typeName</span> <span class="synIdentifier">=</span> getTypeName(of<span class="synSpecial">:</span> <span class="synType">Int.self</span>) <span class="synComment">// &quot;Int&quot;</span>
+</pre>
+
+
+<p>Execute this, You can get the type name. This is the first step of meta programming with metadata!</p>
+
+<h2>Use cases inside of Swift</h2>
+
+<ul>
+<li>Allocate instance
+
+<ul>
+<li>Value Witness Table</li>
+</ul>
+</li>
+<li>Dynamic method dispatch
+
+<ul>
+<li>VTable</li>
+</ul>
+</li>
+<li>Reflection
+
+<ul>
+<li>Mirror API</li>
+</ul>
+</li>
+</ul>
+
+
+<p>Metadata is used for dynamic behavior in Swift. Many people use Swift without realizing this, but there are many use cases. Where? The most common use case is allocating an instance. And if you call a method through <code>protocol</code> or <code>class</code>, the method table stored in metadata is referenced to get the method reference.
+In other cases, <code>Mirror</code> API uses metadata to reflect properties.</p>
+
+<p>In this way, metadata is very useful inside of Swift, but we can abuse it.</p>
+
+<h2>Method swizzling</h2>
+
+<p>Next, I'll talk about the Black magic that you used in Objective-C. The black magic is Method swizzling. If you understand the metadata, you can get great power.</p>
+
+<h2>Method swizzling</h2>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">class</span> <span class="synType">Animal</span> {
+    <span class="synPreProc">func</span> <span class="synIdentifier">bar</span>() { print(<span class="synConstant">&quot;bar&quot;</span>) }
+    <span class="synPreProc">func</span> <span class="synIdentifier">foo</span>() { print(<span class="synConstant">&quot;foo&quot;</span>) }
+}
+
+<span class="synPreProc">struct</span> <span class="synType">ClassMetadata</span> {
+    <span class="synIdentifier">...</span>
+    <span class="synComment">// VTable</span>
+    <span class="synPreProc">var</span> <span class="synIdentifier">barRef</span><span class="synSpecial">:</span> <span class="synType">FunctionRef</span>
+    <span class="synPreProc">var</span> <span class="synIdentifier">fooRef</span><span class="synSpecial">:</span> <span class="synType">FunctionRef</span>
+}
+</pre>
+
+
+<p>First, reproduce the memory layout as getting the type name.
+Class methods are called via VTable that is a table of pointers to functions. So it should work if we replace the pointers.</p>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">let</span> <span class="synIdentifier">metadata</span> <span class="synIdentifier">=</span> unsafeBitCast(
+    Animal.<span class="synIdentifier">self</span>, to<span class="synSpecial">:</span> <span class="synType">UnsafeMutablePointer</span><span class="synSpecial">&lt;ClassMetadata&gt;</span>.<span class="synIdentifier">self</span>
+)
+
+<span class="synPreProc">let</span> <span class="synIdentifier">bar</span> <span class="synIdentifier">=</span> withUnsafeMutablePointer(to<span class="synSpecial">:</span> <span class="synIdentifier">&amp;</span>metadata.pointee.barRef) { <span class="synIdentifier">$0</span> }
+<span class="synPreProc">let</span> <span class="synIdentifier">foo</span> <span class="synIdentifier">=</span> withUnsafeMutablePointer(to<span class="synSpecial">:</span> <span class="synIdentifier">&amp;</span>metadata.pointee.fooRef) { <span class="synIdentifier">$0</span> }
+
+bar.pointee <span class="synIdentifier">=</span> foo.pointee
+
+<span class="synPreProc">let</span> <span class="synIdentifier">animal</span> <span class="synIdentifier">=</span> Animal()
+animal.bar() <span class="synComment">// foo</span>
+</pre>
+
+
+<p>Get the metadata from metatype using <code>unsafeBitCast</code>
+and get the both pointers of the functions to swizzle.
+Then, it's easy to replace them.
+This is very simple but this works well.
+Like this, using metadata we can achieve what seems impossible.</p>
+
+<h2>Use cases</h2>
+
+<ul>
+<li>Zewo/Reflection</li>
+<li>wickwirew/Runtime</li>
+<li>alibaba/HandyJSON</li>
+<li>kateinoigakukun/StubKit</li>
+</ul>
+
+
+<p>Now I will introduce some use cases of metadata in OSS I found. The top two provide a Swifty interface to access metadata information. They are very useful when using metadta. The third one is a JSON serialization library which enables encoding and decoding JSON without mapping configuration.</p>
+
+<h2>alibaba/HandyJSON</h2>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">struct</span> <span class="synType">Item</span><span class="synSpecial">:</span> <span class="synType">HandyJSON</span> {
+    <span class="synPreProc">var</span> <span class="synIdentifier">name</span><span class="synSpecial">:</span> <span class="synType">String</span> <span class="synIdentifier">=</span> <span class="synConstant">&quot;&quot;</span>
+    <span class="synPreProc">var</span> <span class="synIdentifier">price</span><span class="synSpecial">:</span> <span class="synType">Double</span>?
+    <span class="synPreProc">var</span> <span class="synIdentifier">description</span><span class="synSpecial">:</span> <span class="synType">String</span>?
+}
+
+<span class="synStatement">if</span> <span class="synPreProc">let</span> <span class="synIdentifier">item</span> <span class="synIdentifier">=</span> Item.deserialize(from<span class="synSpecial">:</span> <span class="synType">jsonString</span>) {
+    <span class="synComment">// ...</span>
+}
+</pre>
+
+
+<p>This feature has been achieved by <code>Codable</code> with compiler code generation since Swift4, but <code>HandyJSON</code> was created before <code>Codable</code> and uses metadata to make a relationship between value and property name without Objective-C API.</p>
+
+<h2>Use cases</h2>
+
+<ul>
+<li>Zewo/Reflection</li>
+<li>wickwirew/Runtime</li>
+<li>alibaba/HandyJSON</li>
+<li>kateinoigakukun/StubKit</li>
+</ul>
+
+
+<p>The last use case is my library <code>StubKit</code>.</p>
+
+<h2>kateinoigakukun/StubKit</h2>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">import</span> StubKit
+
+<span class="synPreProc">struct</span> <span class="synType">User</span><span class="synSpecial">:</span> <span class="synType">Codable</span> {
+    <span class="synPreProc">let</span> <span class="synIdentifier">name</span><span class="synSpecial">:</span> <span class="synType">String</span>
+    <span class="synPreProc">let</span> <span class="synIdentifier">age</span><span class="synSpecial">:</span> <span class="synType">UInt</span>
+}
+
+<span class="synPreProc">let</span> <span class="synIdentifier">user</span> <span class="synIdentifier">=</span> try Stub.make(User.<span class="synIdentifier">self</span>)
+<span class="synComment">// User(name: &quot;This is stub string&quot;, age: 12345)</span>
+</pre>
+
+
+<p>This library enables instantiating stubs without any arguments and makes it easy to instantiate struct with many many fields. Most of this feature is implemented with <code>Codable</code> but some features are implemented using type metadata.</p>
+
+<h2><a href="https://github.com/kateinoigakukun/StubKit">kateinoigakukun/StubKit</a></h2>
+
+<p><span itemscope itemtype="http://schema.org/Photograph"><a href="http://f.hatena.ne.jp/kateinoigaku/20190322173844" class="hatena-fotolife" itemprop="url"><img src="https://cdn-ak.f.st-hatena.com/images/fotolife/k/kateinoigaku/20190322/20190322173844.jpg" alt="f:id:kateinoigaku:20190322173844j:image" title="f:id:kateinoigaku:20190322173844j:image" class="hatena-fotolife" itemprop="image"></a></span></p>
+
+<p>Before I introduce the use case of metadata, I'll share with you how this stub function works. First, a basic struct forms a tree structure and you can traverse it using <code>Decoder</code> protocol.</p>
+
+<p>So if we prepare the stub of a leaf and inject it while traversing, we can instantiate any type of stub without arguments.</p>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">func</span> <span class="synIdentifier">leafStub</span><span class="synSpecial">&lt;T&gt;</span>(of type<span class="synSpecial">:</span> <span class="synType">T.Type</span>) <span class="synSpecial">-&gt;</span> <span class="synType">T</span> {
+    <span class="synStatement">guard</span> <span class="synPreProc">let</span> <span class="synIdentifier">stubbable</span> <span class="synIdentifier">=</span> type <span class="synStatement">as</span>? Stubbable <span class="synStatement">else</span> { <span class="synStatement">return</span> <span class="synConstant">nil</span> }
+    <span class="synStatement">return</span> type.stub
+}
+
+<span class="synPreProc">extension</span> <span class="synType">Int</span><span class="synSpecial">:</span> <span class="synType">Stubbable</span> {
+    <span class="synPreProc">var</span> <span class="synIdentifier">stub</span><span class="synSpecial">:</span> <span class="synType">Int</span> { <span class="synStatement">return</span> <span class="synConstant">12345</span> }
+}
+
+<span class="synPreProc">extension</span> <span class="synType">enum</span><span class="synSpecial">:</span> <span class="synType">Stubbable</span> { <span class="synComment">// 🚫 Can't extend</span>
+    <span class="synPreProc">var</span> <span class="synIdentifier">stub</span><span class="synSpecial">:</span> <span class="synType">Self</span> {
+        <span class="synStatement">return</span> enumStub()
+    }
+}
+</pre>
+
+
+<p>For example, <code>String</code>, <code>Int</code> and enum can be leaf types. It's easy to prepare a stub of basic data types, but enum can be defined by users so we need to prepare all stubs of custom enums manually. I know it's very hard so I implemented generating enum instances using metadata.</p>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">func</span> <span class="synIdentifier">enumStub</span><span class="synSpecial">&lt;T&gt;</span>(of type<span class="synSpecial">:</span> <span class="synType">T.Type</span>) <span class="synSpecial">-&gt;</span> <span class="synType">T</span>? {
+    <span class="synStatement">if</span> isEnum(type<span class="synSpecial">:</span> <span class="synType">type</span>) {
+        <span class="synPreProc">let</span> <span class="synIdentifier">rawValue</span> <span class="synIdentifier">=</span> <span class="synConstant">0</span>
+        <span class="synPreProc">let</span> <span class="synIdentifier">rawPointer</span> <span class="synIdentifier">=</span> withUnsafePointer(to<span class="synSpecial">:</span> <span class="synType">rawValue</span>) { UnsafeRawPointer(<span class="synIdentifier">$0</span>) }
+        <span class="synStatement">return</span> rawPointer.assumingMemoryBound(to<span class="synSpecial">:</span> <span class="synType">T.self</span>).pointee
+    }
+    <span class="synStatement">return</span> <span class="synConstant">nil</span>
+}
+
+<span class="synPreProc">func</span> <span class="synIdentifier">isEnum</span><span class="synSpecial">&lt;T&gt;</span>(type<span class="synSpecial">:</span> <span class="synType">T.Type</span>) <span class="synSpecial">-&gt;</span> <span class="synType">Bool</span> {
+    <span class="synPreProc">let</span> <span class="synIdentifier">metadata</span> <span class="synIdentifier">=</span> unsafeBitCast(type, to<span class="synSpecial">:</span> <span class="synType">UnsafePointer</span><span class="synSpecial">&lt;EnumMetadata&gt;</span>.<span class="synIdentifier">self</span>).pointee
+    <span class="synStatement">return</span> metadata.kind <span class="synIdentifier">==</span> <span class="synConstant">1</span> <span class="synComment">// kind value of enum is 1</span>
+}
+</pre>
+
+
+<p> We know that we can cast <code>Int</code> value to enum because they have same memory layout.
+However the method is only available for enum and it's necessary to check whether the type is enum. Metadata is effective here.
+The head address of the metadata is which kind the type is <code>class</code>, <code>struct</code> or <code>enum</code>. The kind value of enum is statically 1. So we can check if the type is enum by comparing this value.</p>
+
+<h2>Caution</h2>
+
+<ul>
+<li>ABI stability</li>
+<li>Responsibility</li>
+</ul>
+
+
+<p>Swift4.2 has no ABI stability so metadata layout will be broken in Swift5. But we have good news that ABI stability is accomplished in Swift5! So you can make a library easily. But if you want to support both Swift4 and 5, you will need a lot of effort to maintain it.
+We got great power but please remember that using metadata is not an official way of doing things in Swift. If you use the metadata and particularly if you rewrite it, you must have a deep understanding of metadata.
+For example, method swizzling may be reverted to the original implementation by optimization. It's necessary to dispatch method through method table to swizzle implementation, but dynamic dispatch can be optimized to static dispatch by "Devirtualize" optimization. You must handle cases like this to use this magic.
+"With great power comes great responsibility"</p>
+
+<h2>Summary</h2>
+
+<ul>
+<li>Swift uses metadata for dynamic behavior</li>
+<li>We can use metadata in Swift</li>
+<li>Let's write meta programming libraries!</li>
+</ul>
+
+
+<p>Let me wrap up the key points.
+- First, Swift uses metadata for dynamic method dispatch, reflection API and so on.
+- Second, we can use it in Swift by reproducing memory layout. It brings big benefits and it's just fun.
+So, I'm looking forward to your great libraries using metadata.
+That’s all, thank you all very much.</p>

@@ -1,0 +1,137 @@
+---
+layout: post
+title: "コンパイルが通ってほしいSwiftコード"
+date: 2018-04-04 22:54:25 +0900
+language: ja
+source_url: https://kateinoigakukun.hatenablog.com/entry/2018/04/04/225425
+permalink: /blog/2018/04/04/225425/
+---
+
+<p>見つけたら随時更新。バグレポ出してないやつもある</p>
+
+<h2>Protocol extension周り</h2>
+
+<p>protocol extensionの中でtypealiasを貼ると何かが壊れる</p>
+
+<p><code>'T' does not have a member type named 'A'; did you mean 'A'?</code></p>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">func</span> <span class="synIdentifier">foo</span><span class="synSpecial">&lt;T: P&gt;</span>(a<span class="synSpecial">:</span> <span class="synType">T</span>) <span class="synSpecial">-&gt;</span> <span class="synType">T.A</span> {
+    fatalError()
+}
+
+<span class="synPreProc">struct</span> <span class="synType">B</span> {}
+<span class="synPreProc">protocol</span> <span class="synType">P</span> {}
+<span class="synPreProc">extension</span> <span class="synType">P</span> {
+    <span class="synPreProc">typealias</span> <span class="synType">A</span> <span class="synIdentifier">=</span> B
+}
+</pre>
+
+
+<p>訳が分からないのは</p>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">struct</span> <span class="synType">B</span> {}
+<span class="synPreProc">protocol</span> <span class="synType">P</span> {}
+<span class="synPreProc">extension</span> <span class="synType">P</span> {
+    <span class="synPreProc">typealias</span> <span class="synType">A</span> <span class="synIdentifier">=</span> B
+}
+<span class="synPreProc">func</span> <span class="synIdentifier">foo</span><span class="synSpecial">&lt;T: P&gt;</span>(a<span class="synSpecial">:</span> <span class="synType">T</span>) <span class="synSpecial">-&gt;</span> <span class="synType">T.A</span> {
+    fatalError()
+}
+</pre>
+
+
+<p>にすると通るようになる。<code>P</code>のassoctypeにAを宣言しても通る。</p>
+
+<h2>assoctypeのデフォルト型</h2>
+
+<p>WIP</p>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">protocol</span> <span class="synType">P</span> {
+    <span class="synStatement">associatedtype</span> X <span class="synIdentifier">=</span> Int
+    <span class="synPreProc">func</span> <span class="synIdentifier">f</span>(_ x<span class="synSpecial">:</span> <span class="synType">X</span>)
+}
+
+<span class="synPreProc">extension</span> <span class="synType">P</span> <span class="synStatement">where</span> <span class="synIdentifier">Self</span> <span class="synIdentifier">==</span> S {
+    <span class="synPreProc">func</span> <span class="synIdentifier">f</span>(_ x<span class="synSpecial">:</span> <span class="synType">X</span>) {}
+}
+
+<span class="synPreProc">struct</span> <span class="synType">S</span><span class="synSpecial">:</span> <span class="synType">P</span> {
+    <span class="synPreProc">func</span> <span class="synIdentifier">f</span>(_ x<span class="synSpecial">:</span> <span class="synType">X</span>) {} <span class="synComment">// error: reference to invalid associated type 'X' of type 'S'</span>
+}
+</pre>
+
+
+<h2>デフォルト引数</h2>
+
+<p>inner関数のデフォルト引数に外の関数の引数を詰めるとセグフォで落ちる。
+SILを作る時にアサーションでコケてる。比較的コントリビュートしやすそうなので頑張りたい。</p>
+
+<pre class="code" data-lang="" data-unlink>bool isGlobalLazilyInitialized(swift::VarDecl *): Assertion `!var-&gt;getDeclContext()-&gt;isLocalContext() &amp;&amp; &#34;not a global variable!&#34;&#39; failed.</pre>
+
+
+
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">func</span> <span class="synIdentifier">bar</span>(foo<span class="synSpecial">:</span> <span class="synType">Int</span>) {
+    <span class="synPreProc">func</span> <span class="synIdentifier">inner</span>(arg<span class="synSpecial">:</span> <span class="synType">Int</span> <span class="synIdentifier">=</span> foo) {}
+    print(inner())
+}
+
+bar(foo<span class="synSpecial">:</span> <span class="synConstant">3</span>)
+</pre>
+
+
+<p><a href="https://bugs.swift.org/browse/SR-7328">https://bugs.swift.org/browse/SR-7328</a></p>
+
+<h2>assoctypeのデフォルト型</h2>
+
+<p>2018/04/17追記</p>
+
+<p>デフォルト型を持つassoctypeをシグネチャに持つ要素を2個実装するとコンパイルが通らなくなる。XをIntに展開して書くと通る。witness tableが壊れてそう。</p>
+
+<p>ついでに、デフォルト型を持つassoctypeが補完に出ないので困ってる。</p>
+
+<pre class="code" data-lang="" data-unlink> error: reference to invalid associated type &#39;X&#39; of type &#39;S&#39;
+    func f2(_ x: X) {}</pre>
+
+
+
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">protocol</span> <span class="synType">P</span> {
+    <span class="synStatement">associatedtype</span> X <span class="synIdentifier">=</span> Int
+
+    <span class="synPreProc">func</span> <span class="synIdentifier">f1</span>(_ x<span class="synSpecial">:</span> <span class="synType">X</span>)
+    <span class="synPreProc">func</span> <span class="synIdentifier">f2</span>(_ x<span class="synSpecial">:</span> <span class="synType">X</span>)
+}
+
+<span class="synPreProc">struct</span> <span class="synType">S</span><span class="synSpecial">:</span> <span class="synType">P</span> {
+    <span class="synPreProc">func</span> <span class="synIdentifier">f1</span>(_ x<span class="synSpecial">:</span> <span class="synType">X</span>) {}
+    <span class="synPreProc">func</span> <span class="synIdentifier">f2</span>(_ x<span class="synSpecial">:</span> <span class="synType">X</span>) {}
+}
+</pre>
+
+
+<p><a href="https://bugs.swift.org/browse/SR-7467">https://bugs.swift.org/browse/SR-7467</a></p>
+
+<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fapple%2Fswift%2Fblob%2Fda10607e450e7847a68bc9217609390f764b2b50%2Flib%2FSema%2FTypeCheckType.cpp%23L682" title="apple/swift" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/apple/swift/blob/da10607e450e7847a68bc9217609390f764b2b50/lib/Sema/TypeCheckType.cpp#L682">github.com</a></cite></p>
+
+<h2>where付きextensionでassoctypeを上書き</h2>
+
+<p>型を再帰的に決定させるために<code>assoctype</code>のデフォルト型で再帰の終了条件を表現できるなー、と思い書いてみたところクラッシュした。</p>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">protocol</span> <span class="synType">P</span> {
+    <span class="synStatement">associatedtype</span> Assoc <span class="synIdentifier">=</span> A
+}
+
+<span class="synPreProc">struct</span> <span class="synType">A</span> {}
+<span class="synPreProc">struct</span> <span class="synType">B</span><span class="synSpecial">:</span> <span class="synType">P</span> {
+    <span class="synPreProc">typealias</span> <span class="synType">Assoc</span> <span class="synIdentifier">=</span> Int
+}
+
+<span class="synPreProc">struct</span> <span class="synType">S</span><span class="synSpecial">&lt;T&gt;:</span> <span class="synType">P</span> {}
+
+<span class="synPreProc">extension</span> <span class="synType">S</span> <span class="synStatement">where</span> T<span class="synSpecial">:</span> <span class="synType">P</span> {
+    <span class="synPreProc">typealias</span> <span class="synType">Assoc</span> <span class="synIdentifier">=</span> T.Assoc
+}
+
+print(type(of<span class="synSpecial">:</span> <span class="synType">S</span><span class="synSpecial">&lt;B&gt;</span>.Assoc.<span class="synIdentifier">self</span>)) <span class="synComment">// expected 'Int'</span>
+</pre>

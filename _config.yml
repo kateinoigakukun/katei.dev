@@ -1,0 +1,21 @@
+title: Yuta Saito
+description: Software engineer working on Swift, Ruby, and WebAssembly.
+url: https://katei.dev
+baseurl: ""
+lang: en
+timezone: Asia/Tokyo
+markdown: kramdown
+theme: minima
+collections:
+  external_posts:
+    output: false
+header_pages:
+  - blog/index.md
+permalink: /blog/:year/:month/:day/:title/
+plugins:
+  - jekyll-feed
+  - jekyll-seo-tag
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - vendor

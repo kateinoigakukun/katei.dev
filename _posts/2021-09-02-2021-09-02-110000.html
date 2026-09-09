@@ -1,0 +1,264 @@
+---
+layout: post
+title: "SwiftコンパイラのAuto-linkingとそれを直した話"
+date: 2021-09-02 11:00:00 +0900
+language: ja
+source_url: https://kateinoigakukun.hatenablog.com/entry/2021/09/02/110000
+permalink: /blog/2021/09/02/110000/
+---
+
+<p>前回のエントリでAuto-linkingについて解説しました。今回はSwiftコンパイラにおけるAuto-linkingの使われ方と、最近それを直した話をします。</p>
+
+<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fkateinoigakukun.hatenablog.com%2Fentry%2F2021%2F08%2F28%2F223951" title="Auto-linkingまとめ - kateinoigakukunのブログ" class="embed-card embed-blogcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 190px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://kateinoigakukun.hatenablog.com/entry/2021/08/28/223951">kateinoigakukun.hatenablog.com</a></cite></p>
+
+<h2>用語定義</h2>
+
+<ul>
+<li>モジュール: Swiftのimportできる単位。 <code>.swiftmodule</code>、<code>.swiftinterface</code>または <code>module.modulemap</code> が実態。Cで言うヘッダ</li>
+<li>ライブラリ: <code>libfoo.a</code> とか <code>libfoo.dylib</code>。大抵モジュールと1対1になってる。</li>
+</ul>
+
+
+<h2>SwiftのAuto-linking</h2>
+
+<p>C言語では以下のようなpragmaを書くことでリンクするライブラリを指定していました。</p>
+
+<pre class="code lang-c" data-lang="c" data-unlink><span class="synPreProc">#include </span><span class="synConstant">&lt;math.h&gt;</span>
+
+<span class="synPreProc">#pragma comment(lib, </span><span class="synConstant">&quot;m&quot;</span><span class="synPreProc">)</span>
+</pre>
+
+
+<p>一方で、Swiftでは <code>import</code> 文を書くだけで、インポートしたモジュールに紐づくライブラリがリンクされます。
+XcodeでiOSアプリを書く際、明示的にUIKitのリンク設定をすることなくビルドが成功しているのは、Auto-linkingの仕組みのおかげです。</p>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">import</span> UIKit
+</pre>
+
+
+<p>モジュールにライブラリを紐付ける為には、モジュールをビルドする際に <code>-module-link-name</code> オプションを付ける必要があります。このオプションを明示的に指定しない場合Auto-linkingは有効になりません。</p>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synComment">// foo.swift</span>
+<span class="synStatement">public</span> <span class="synPreProc">func</span> <span class="synIdentifier">inc</span>(_ v<span class="synSpecial">:</span> <span class="synType">Int</span>) <span class="synSpecial">-&gt;</span> <span class="synType">Int</span> { v <span class="synIdentifier">+</span> <span class="synConstant">1</span> }
+
+<span class="synComment">// main.swift</span>
+<span class="synPreProc">import</span> foo
+_ <span class="synIdentifier">=</span> inc(<span class="synConstant">1</span>)
+</pre>
+
+
+
+
+<pre class="code bash" data-lang="bash" data-unlink># モジュール &#34;foo&#34; をコンパイル
+$ swiftc -emit-module -emit-library foo.swift -module-link-name foo
+$ ls
+foo.swift
+foo.swiftmodule
+libfoo.dylib
+foo.swiftdoc
+foo.swiftsourceinfo
+
+# -lfoo 無しで動く
+$ swiftc main.swift -I. -L.</pre>
+
+
+<p><code>llvm-bcanalyzer -dump foo.swiftmodule</code> でモジュールファイルの中身を眺めると、 <code>LINK_LIBRARY</code> に <code>"foo"</code> が指定されていることがわかると思います。
+コンパイラはimport文で読み込んだモジュールファイルから<code>LINK_LIBRARY</code>エントリを探し、得られたライブラリの情報をオブジェクトファイルに格納します。</p>
+
+<pre class="code" data-lang="" data-unlink>// foo.swiftmodule
+&lt;MODULE_BLOCK NumWords=610 BlockCodeSize=2&gt;
+  &lt;INPUT_BLOCK NumWords=23 BlockCodeSize=4&gt;
+    &lt;IMPORTED_MODULE abbrevid=4 op0=0 op1=0 op2=0/&gt; blob data = &#39;Swift&#39;
+    &lt;IMPORTED_MODULE abbrevid=4 op0=0 op1=0 op2=0/&gt; blob data = &#39;SwiftOnoneSupport&#39;
+    &lt;LINK_LIBRARY abbrevid=6 op0=0 op1=0/&gt; blob data = &#39;foo&#39;
+  &lt;/INPUT_BLOCK&gt;
+&lt;/MODULE_BLOCK&gt;</pre>
+
+
+<p>以下にmacOS上でのMach-Oオブジェクトファイルの内容を示します。<a href="https://kateinoigakukun.hatenablog.com/entry/2021/08/28/223951">前回のエントリ</a>で紹介した <code>LC_LINKER_OPTION</code> に <code>-lfoo</code> が埋め込まれていますね。これをリンカに渡すことでユーザはリンカオプションを渡すこと無く、ライブラリをリンクできます。実は標準ライブラリも同様の仕組みでリンクされています。</p>
+
+<pre class="code" data-lang="" data-unlink>$ swiftc -c main.swift -I. -o main.o
+$ llvm-objdump -m -x main.o
+...
+Load command 4
+     cmd LC_LINKER_OPTION
+ cmdsize 24
+   count 1
+  string #1 -lfoo
+Load command 5
+     cmd LC_LINKER_OPTION
+ cmdsize 40
+   count 1
+  string #1 -lswiftSwiftOnoneSupport
+Load command 6
+     cmd LC_LINKER_OPTION
+ cmdsize 24
+   count 1
+  string #1 -lswiftCore
+</pre>
+
+
+<h2>間接依存するライブラリのAuto-linking</h2>
+
+<p>さて、モジュールとライブラリの依存関係が次のようになっていた場合を考えてみましょう。
+mainはbarだけをインポートしていて、barを介してfooに間接依存していますね。</p>
+
+<p>この場合、最終的な成果物にはfooとbar両方がリンクされていて欲しいです。</p>
+
+<pre class="code" data-lang="" data-unlink>main -&gt; bar -&gt; foo</pre>
+
+
+
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synComment">// foo.swift</span>
+<span class="synStatement">public</span> <span class="synPreProc">func</span> <span class="synIdentifier">inc</span>(_ v<span class="synSpecial">:</span> <span class="synType">Int</span>) <span class="synSpecial">-&gt;</span> <span class="synType">Int</span> { v <span class="synIdentifier">+</span> <span class="synConstant">1</span> }
+
+<span class="synComment">// bar.swift</span>
+<span class="synPreProc">import</span> foo
+<span class="synStatement">public</span> <span class="synPreProc">func</span> <span class="synIdentifier">dec</span>(_ v<span class="synSpecial">:</span> <span class="synType">Int</span>) <span class="synSpecial">-&gt;</span> <span class="synType">Int</span> { inc(v) <span class="synIdentifier">-</span> <span class="synConstant">2</span> }
+
+<span class="synComment">// main.swift</span>
+<span class="synPreProc">import</span> bar
+_ <span class="synIdentifier">=</span> dec(<span class="synConstant">1</span>)
+</pre>
+
+
+<p>コンパイラが <code>main.swift</code> を処理する中で <code>import bar</code>から、<code>bar.swiftmodule</code>を読み込みます。
+直接依存する<code>bar.swiftmodule</code>には ライブラリ<code>bar</code>をリンクする<code>LINK_LIBRARY</code>エントリと、barモジュールがfooモジュールに依存していることを示す <code>IMPORTED_MODULE</code> エントリが含まれています。
+コンパイラは <code>IMPORTED_MODULE</code> によるモジュールの依存グラフを辿っていき、全てのモジュールから <code>LINK_LIBRARY</code> をかき集めます。</p>
+
+<pre class="code" data-lang="" data-unlink>// bar.swiftmodule
+&lt;MODULE_BLOCK NumWords=612 BlockCodeSize=2&gt;
+  &lt;INPUT_BLOCK NumWords=25 BlockCodeSize=4&gt;
+    &lt;IMPORTED_MODULE abbrevid=4 op0=0 op1=0 op2=0/&gt; blob data = &#39;Swift&#39;
+    &lt;IMPORTED_MODULE abbrevid=4 op0=0 op1=0 op2=0/&gt; blob data = &#39;SwiftOnoneSupport&#39;
+    &lt;IMPORTED_MODULE abbrevid=4 op0=0 op1=0 op2=0/&gt; blob data = &#39;foo&#39;
+    &lt;LINK_LIBRARY abbrevid=6 op0=0 op1=0/&gt; blob data = &#39;bar&#39;
+  &lt;/INPUT_BLOCK&gt;
+&lt;/MODULE_BLOCK&gt;</pre>
+
+
+<p>最終的にオブジェクトファイルには期待通りfooとbar両方のリンカオプションが埋め込まれます。</p>
+
+<pre class="code" data-lang="" data-unlink>Load command 4
+     cmd LC_LINKER_OPTION
+ cmdsize 24
+   count 1
+  string #1 -lbar
+Load command 5
+     cmd LC_LINKER_OPTION
+ cmdsize 24
+   count 1
+  string #1 -lfoo</pre>
+
+
+<h2>プライベートな依存を表現する <code>@_implementaionOnly</code></h2>
+
+<p>Swiftにはimport文にいくつかのバリエーションがあり、その内の1つに<code>@_implementaionOnly</code>というアトリビュートがあります。</p>
+
+<p>セマンティクスは「importしたモジュールの型が自身のpublicなAPI/ABIに露出していないことを保証する」です。
+言い換えると、「API/ABIは再エクスポートせず実装のみをライブラリ内で使う」になると思います。</p>
+
+<p>これにより、ライブラリ作成者は自身の依存をプライベートにでき、ライブラリのABIを壊さずに依存ライブラリを変更出来るようになります。</p>
+
+<p>詳しい議論については以下のフォーラム投稿を見てください。</p>
+
+<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fforums.swift.org%2Ft%2Fupdate-on-implementation-only-imports%2F26996" title="Update on implementation-only imports" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://forums.swift.org/t/update-on-implementation-only-imports/26996">forums.swift.org</a></cite></p>
+
+<p>ここで、次のケースを考えます。モジュールfooに依存するモジュールbarはfooをプライベートにインポートします。
+依存をプライベートにする、ということはライブラリの利用者mainは間接依存するfooの存在について関知せず、mainのリンク時にfooをリンクする必要があるか分かりません。
+たとえば、barが共有ライブラリとして配布されている場合、そこにfooが静的にリンクされている場合もあります。その場合mainをリンクする際には <code>-lbar</code> だけあれば良いです。むしろ <code>libfoo.a</code> が配布されているとは限らないため、 <code>-lfoo</code>をmainのリンク時に渡すと、ライブラリfooが見つからずリンクエラーになるかもしれません。</p>
+
+<pre class="code" data-lang="" data-unlink>main -&gt; bar -&gt; foo</pre>
+
+
+
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synComment">// foo.swift</span>
+<span class="synStatement">public</span> <span class="synPreProc">func</span> <span class="synIdentifier">inc</span>(_ v<span class="synSpecial">:</span> <span class="synType">Int</span>) <span class="synSpecial">-&gt;</span> <span class="synType">Int</span> { v <span class="synIdentifier">+</span> <span class="synConstant">1</span> }
+
+<span class="synComment">// bar.swift</span>
+<span class="synType">@_implementaionOnly</span> <span class="synType">import</span> foo
+<span class="synStatement">public</span> <span class="synPreProc">func</span> <span class="synIdentifier">dec</span>(_ v<span class="synSpecial">:</span> <span class="synType">Int</span>) <span class="synSpecial">-&gt;</span> <span class="synType">Int</span> { inc(v) <span class="synIdentifier">-</span> <span class="synConstant">2</span> }
+
+<span class="synComment">// main.swift</span>
+<span class="synPreProc">import</span> bar
+_ <span class="synIdentifier">=</span> dec(<span class="synConstant">1</span>)
+</pre>
+
+
+<p>ということで、 <code>@_implementaionOnly</code> 付きでインポートされると、その先のモジュール依存グラフを追わなくなります。
+つまり、<code>bar</code>をインポートする環境に<code>foo.swiftmodule</code> が配布されていなくても良いわけです。</p>
+
+<p><code>@_implementaionOnly</code>の有無によるbar.swiftmoduleの差分を以下に示します。なにやら <code>IMPORTED_MODULE</code> エントリにフラグが立っていますね。
+これが<code>@_implementaionOnly</code>の印です。</p>
+
+<p>このbarをインポートしたmain.swiftをコンパイルすると、<code>-lbar</code> だけが埋め込まれたオブジェクトファイルができます。fooへの依存が隠蔽されてますね。</p>
+
+<pre class="code lang-diff" data-lang="diff" data-unlink>// bar.swiftmodule
+ &lt;MODULE_BLOCK NumWords=612 BlockCodeSize=2&gt;
+   &lt;INPUT_BLOCK NumWords=25 BlockCodeSize=4&gt;
+     &lt;IMPORTED_MODULE abbrevid=4 op0=0 op1=0 op2=0/&gt; blob data = 'Swift'
+     &lt;IMPORTED_MODULE abbrevid=4 op0=0 op1=0 op2=0/&gt; blob data = 'SwiftOnoneSupport'
+<span class="synSpecial">-    &lt;IMPORTED_MODULE abbrevid=4 op0=0 op1=0 op2=0/&gt; blob data = 'foo'</span>
+<span class="synIdentifier">+    &lt;IMPORTED_MODULE abbrevid=4 op0=2 op1=0 op2=0/&gt; blob data = 'foo'</span>
+     &lt;LINK_LIBRARY abbrevid=6 op0=0 op1=0/&gt; blob data = 'bar'
+   &lt;/INPUT_BLOCK&gt;
+ &lt;/MODULE_BLOCK&gt;
+</pre>
+
+
+<h2><code>@_implementaionOnly</code> によって壊れた静的Auto-linking</h2>
+
+<p>さて、<code>@_implementaionOnly</code> 付きでもAuto-linkingはうまく動いているように思われましたが、実はこれだけでは上手く行かないケースがあります。</p>
+
+<p>ここでは実際に壊れてしまった Foundation (<a href="https://github.com/apple/swift-corelibs-foundation">apple/swift-corelibs-foundation</a>)のケースを紹介します。
+Foundationのモジュール依存関係は以下のようになっています。（説明のため簡略化してます）</p>
+
+<pre class="code" data-lang="" data-unlink>Foundation -&gt; CoreFoundation</pre>
+
+
+<p>さらに、CoreFoundationモジュールは <code>module.modulemap</code>で定義されており、依存ライブラリとして <code>icui18n</code> を指定しています。
+そのためライブラリの依存関係としては、次のようになっています。</p>
+
+<pre class="code" data-lang="" data-unlink>Foundation -&gt; CoreFoundation -&gt; icui18n</pre>
+
+
+<p>CoreFoundationはツールチェインユーザーから直接使われることを想定しておらず、Foundationのプライベートな依存であるため、ある日全ての <code>import CoreFoundation</code> が <code>@_implementaionOnly</code> 付きに変更されました。これにより、ツールチェインにCoreFoundationのヘッダやmodulemapを含める必要が無くなります。（実際はまだ含まれていますが究極的には必要ないです。）</p>
+
+<p>しかし、よく考えてみてください。「Foundationのプライベートな依存CoreFoundation」が依存するICUのicui18nは本当にプライベートな依存ライブラリでしょうか？
+icui18nはSwift標準ライブラリでも使われており、プログラム全体で共有すべき依存です。
+しかし、Foundationはicui18nへの直接のライブラリ依存を持っておらず、CoreFoundationへの依存がプライベートとなってしまった状態ではリンカオプションを伝播する手段がありません。</p>
+
+<p>この問題により、Swift 5.4のLinux向けツールチェインではFoundationの静的リンク時にシンボル不足エラーが出ています。</p>
+
+<p><a href="https://bugs.swift.org/browse/SR-14536">[SR-14536] Importing FoundationNetworking with -static-stdlib is broken with missing symbols on Linux - Swift</a></p>
+
+<h2>修正編</h2>
+
+<p>この問題を解消するためには、Foundationにicui18nへのライブラリ依存（=LINK_LIBRARYエントリ）を持たせれば良いわけです。
+しかしSwift 5.4当時のコンパイラに任意のライブラリの <code>LINK_LIBRARY</code> エントリをモジュールに差し込む機能はありませんでした。</p>
+
+<p>そこで、Swift Forumで解決策について議論した上で、コンパイラに新しいオプションを追加実装しました。</p>
+
+<p>このパッチでは、<code>-public-autolink-library</code> というオプションを追加して、指定したライブラリを <code>LINK_LIBRARY</code>エントリ に出力するようにしています。</p>
+
+<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fforums.swift.org%2Ft%2Fautolinking-behavior-of-implementationonly-with-static-linking%2F44393" title="Autolinking behavior of @_implementationOnly with static linking" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://forums.swift.org/t/autolinking-behavior-of-implementationonly-with-static-linking/44393">forums.swift.org</a></cite></p>
+
+<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fapple%2Fswift%2Fpull%2F35936" title="[Frontend] Add -public-autolink-library option by kateinoigakukun · Pull Request #35936 · apple/swift" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/apple/swift/pull/35936">github.com</a></cite></p>
+
+<p>コンパイラ側のパッチがマージされると、ようやくFoundation側の修正に取り組めます。
+このパッチでは、追加したオプションを使って <code>icui18n</code> へのライブラリ依存をFoundationに足しています。</p>
+
+<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fapple%2Fswift-corelibs-foundation%2Fpull%2F2996" title="Fix autolink mechanism for static libraries on Linux by kateinoigakukun · Pull Request #2996 · apple/swift-corelibs-foundation" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/apple/swift-corelibs-foundation/pull/2996">github.com</a></cite></p>
+
+<p>その後リバートやリバート返しを経て、最近ようやく直りました。</p>
+
+<p><a id="conclusion"></a></p>
+
+<h2>まとめ</h2>
+
+<p>Auto-linkingを維持するために多大な努力と時間が費やされていることが伝われば嬉しいです。
+結局最初に問題に気がついてから修正まで半年くらいかかってます。大半はコミュニケーションですが。</p>
+
+<p>すごく頑張ったのでLinuxでSwiftを静的リンクしてる人たちが救われてほしい。</p>

@@ -1,0 +1,122 @@
+---
+layout: post
+title: "TypeProf for IDEの開発をお手伝いしました at クックパッド"
+date: 2021-09-12 12:38:57 +0900
+language: ja
+source_url: https://kateinoigakukun.hatenablog.com/entry/2021/09/12/123857
+permalink: /blog/2021/09/12/123857/
+---
+
+<h2>TL;DR</h2>
+
+<ul>
+<li>8月週3クックパッドインターン</li>
+<li>フルタイムRubyコミッタのチームでTypeProf for IDEの開発</li>
+<li>インパクトの大きい貢献チャンスはその辺に転がってるかもしれない</li>
+</ul>
+
+
+<h2>インターンの内容</h2>
+
+<p>TypeProfはクックパッドでフルタイムRubyコミッタをされている<a href="https://twitter.com/mametter">@mametter</a>さんが開発しているRubyの型プロファイラです。
+Rubyのプログラムにできるだけ型注釈を入れずに抽象解釈によって型を推論する、という面白い特徴があります。</p>
+
+<p>Ruby 3.0ではRBSのプロトタイプを生成するためのツールとしてRubyにバンドルされています。</p>
+
+<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fruby%2Ftypeprof%2F" title="GitHub - ruby/typeprof: An experimental type-level Ruby interpreter for testing and understanding Ruby code" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/ruby/typeprof/">github.com</a></cite></p>
+
+<p>今回のインターンでは、TypeProfの解析結果を利用したRubyのLanguage Serverの実装をお手伝いしました。</p>
+
+<p>TypeProf for IDEについては<a href="https://rubykaigi.org/2021-takeout/presentations/mametter.html">今年のRubyKaigi Takeout 2021のKeynote</a>で発表があったので、雰囲気を知りたい方はこちらを見てください。</p>
+
+<p><iframe width="560" height="315" src="https://www.youtube.com/embed/uNttp63ELoE?feature=oembed" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe><cite class="hatena-citation"><a href="https://www.youtube.com/watch?v=uNttp63ELoE">www.youtube.com</a></cite></p>
+
+<p><iframe src="https://www.slideshare.net/slideshow/embed_code/key/9pxYYHtUcXCkvP" width="427" height="356" frameborder="0" marginwidth="0" marginheight="0" scrolling="no" style="border:1px solid #CCC; border-width:1px; margin-bottom:5px; max-width: 100%;" allowfullscreen> </iframe> <div style="margin-bottom:5px"> <strong> <a href="https://www.slideshare.net/mametter/typeprof-for-ide-enrich-development-experience-without-annotations" title="TypeProf for IDE: Enrich Development Experience without Annotations" target="_blank">TypeProf for IDE: Enrich Development Experience without Annotations</a> </strong> from <strong><a href="https://www.slideshare.net/mametter" target="_blank">mametter</a></strong> </div>  <cite class="hatena-citation"><a href="https://www.slideshare.net/mametter/typeprof-for-ide-enrich-development-experience-without-annotations">www.slideshare.net</a></cite></p>
+
+<h3>実装</h3>
+
+<p>そもそもRubyを触るのが久々かつ、TypeProfがそこそこ大きいプログラムであったため、<code>binding.irb</code>でデバッグ可能な環境を作るところからはじめました。</p>
+
+<p>これを初手で準備したことでその後のコードリーディング効率が格段に上がりました。やはりデバッガは偉大。</p>
+
+
+
+
+<p><a href="https://github.com/ruby/typeprof/pull/34">Add --port option to lsp server for debugging purpose by kateinoigakukun &middot; Pull Request #34 &middot; ruby/typeprof &middot; GitHub</a></p>
+
+<p>その後mameさんに助けてもらいながら数種類のコードジャンプを実装しました。
+ジャンプ先候補はTypeProfの解析結果を使っているので、解析器自体の実装も勉強できて良かったです。</p>
+
+<ul>
+<li><a href="https://github.com/ruby/typeprof/pull/36">LSP: Support local variable definition jump</a></li>
+<li><a href="https://github.com/ruby/typeprof/pull/39">LSP: Support instance variable definition jump</a></li>
+<li><a href="https://github.com/ruby/typeprof/pull/45">LSP: Support Find References for methods</a></li>
+<li><a href="https://github.com/ruby/typeprof/pull/47">LSP: Support class/const definition jump</a></li>
+</ul>
+
+
+<p>もうひとつ面白い改善として、コード補完の高速化を行いました。</p>
+
+<p>TypeProf for IDEではユーザが1タイプするごと (<code>textDocument/didChange</code>) にプログラムを解析し直すのですが、解析の仕組み的に一回の解析にかなり時間がかかります。
+オリジナルの実装では解析中サーバスレッドをブロックしていたため、タイプするごとに解析待ちのリクエストが溜まっていました。</p>
+
+<p>さらに、コード補完 (<code>textDocument/completion</code>)では変更後のプログラムを検証する解析とは別の解析がサーバスレッドで行われているため、1タイプごとに貯まる重いタスクが更に増え、若干もっさりしていました。</p>
+
+<p>LSPでは<code>didChange</code>は通知であり、すぐに結果を返却しなくても良く、更にコード補完リクエストもリクエストとレスポンスの順序を気にしないメソッドなので、高速化のために解析スレッドを分けることにしました。
+また、新しい <code>didChange</code> 通知が来た時点で前の状態での解析結果は無効になるため、解析を途中で打ち切る機構を追加しました。</p>
+
+<p><span itemscope itemtype="http://schema.org/Photograph"><img src="https://cdn-ak.f.st-hatena.com/images/fotolife/k/kateinoigaku/20210912/20210912110945.png" alt="f:id:kateinoigaku:20210912110945p:plain" width="992" height="922" loading="lazy" title="" class="hatena-fotolife" itemprop="image"></span></p>
+
+<table>
+<thead>
+<tr>
+<th style="text-align:center;">before </th>
+<th style="text-align:center;"> after </th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center;"><img src="https://user-images.githubusercontent.com/11702759/132969301-e4315e91-fc0c-4d0d-bd5e-b081641722a3.gif" alt="typeprof-before" /></td>
+<td style="text-align:center;"> <img src="https://user-images.githubusercontent.com/11702759/132969322-a7f9406b-82cd-4ed7-8d23-d27f60944bc4.gif" alt="typeprof-after" /> </td>
+</tr>
+</tbody>
+</table>
+
+
+<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fruby%2Ftypeprof%2Fpull%2F42" title="LSP: Background analysis by kateinoigakukun · Pull Request #42 · ruby/typeprof" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/ruby/typeprof/pull/42">github.com</a></cite></p>
+
+<p>その他にも色々と実装できて楽しかったです。</p>
+
+<p><a href="https://github.com/ruby/typeprof/pulls?q=is%3Apr+author%3Akateinoigakukun+is%3Aclosed+created%3A%3C2021-08-31">インターン中のPRs</a></p>
+
+<h3>Ruby本体への貢献</h3>
+
+<p>TypeProf for IDEは最新の開発版MRI (Matz's Ruby Interpreter) のAPIを使っており、CIではデイリービルドされた最新のRubyバイナリを使っています。</p>
+
+<p>具体的には、<a href="https://github.com/ruby/setup-ruby">ruby/setup-ruby</a> のGitHub Actionsのアクション経由で <a href="https://github.com/ruby/ruby-dev-builder">ruby/ruby-dev-builder</a> でビルドされた成果物を使っていました。</p>
+
+<p>しかし、ある日直近で入ったAPI変更に追従する変更をTypeProfに入れたところ、CI上のテストが失敗し始めました。</p>
+
+<p>調査したところ、ruby/ruby-dev-builderのデイリービルドがmacOS上で数十日間失敗しており、最新のバイナリが全くアップロードされていないことがわかりました。具体的には、macOSにデフォルトで同梱されているGNU Makeのバージョンが古いことが原因で、最新のruby/rubyのMakefileを正しく解釈できていませんでした。</p>
+
+<p>そして、特定のビルドオプションを付けたときのみ再現する問題であったため、ruby本体のCIを奇跡的に通り抜けていました。</p>
+
+<p>（macOSはGPLv3を避けるためにGNU Makeのバージョンを3.81で止めている。<a href="https://savannah.gnu.org/forum/forum.php?forum_id=4380">ちなみに3.81は2006年リリース。最新は4.2</a>）</p>
+
+<p>とりあえずの対処としてGNU Make 3.81で最新のバージョンと同様の動作をさせるためのワークアラウンドを追加しました。</p>
+
+<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fruby%2Fruby%2Fpull%2F4776" title="Fix build failure on macOS with --enable-shared by kateinoigakukun · Pull Request #4776 · ruby/ruby" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/ruby/ruby/pull/4776">github.com</a></cite></p>
+
+<p>ということで晴れてRuby Contributorの実績も解除できました。</p>
+
+<h2>クックパッドの環境</h2>
+
+<p>ruby-devチームの朝会では<a href="https://twitter.com/_ko1">@_ko1</a> さんと<a href="https://twitter.com/mametter">@mametter</a>さんがRubyの話を、僕がSwiftとWebAssemblyの話をする機会があったり、母国語で言語処理系のプロと働けるとても貴重な環境でした。</p>
+
+<h2>感想</h2>
+
+<p>Ruby自体の経験は浅かったものの、言語処理系や巨大プロジェクト開発の経験のお陰で、ある程度の貢献ができたかなと思います。</p>
+
+<p>また、Ruby開発には単純に人手が足りず、自分でも貢献できそうなインパクトの大きいタスクが残っていたり、出来ることはたくさんありそうなので、時間を見つけて継続して関わっていけたらなと思います。</p>
+
+<p>今回のインターン中関わってくださった皆さんありがとうございました。</p>

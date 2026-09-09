@@ -1,0 +1,130 @@
+---
+layout: post
+title: "XcodeGenとCocoaPodsをいい感じに使う"
+date: 2020-02-06 18:22:14 +0900
+language: ja
+source_url: https://kateinoigakukun.hatenablog.com/entry/2020/02/06/182214
+permalink: /blog/2020/02/06/182214/
+---
+
+<h2>背景</h2>
+
+<p>XcodeGenはXcodeのプロジェクトファイルをYAMLから生成するためのツールです。生のプロジェクトファイルは記述が冗長であったり、とても人間が手で管理できるものではないため、YAMLで管理しようというのがモチベーションです。
+<iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fyonaskolb%2FXcodeGen" title="yonaskolb/XcodeGen" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/yonaskolb/XcodeGen">github.com</a></cite></p>
+
+<p>iOS/macOSアプリの開発においてライブラリ管理のデファクトスタンダードとなっているCocoaPodsというソフトウェアがあります。これはライブラリをビルドするためのプロジェクトファイル <code>Pods.xcodeproj</code> を生成し、メインのプロジェクトファイルと統合することでアプリにライブラリをインストールします。</p>
+
+<p>さて、この２つのツールを組み合わせて使おうとすると、</p>
+
+<ol>
+<li>XcodeGenでプロジェクトファイルを生成</li>
+<li><code>pod install</code> でプロジェクトファイルと <code>Pods.xcpdeproj</code>を統合</li>
+</ol>
+
+
+<p>という2ステップの流れになります。しかし、<code>pod install</code> はキャッシュ機構があるとはいえ、ブランチをチェックアウトする度に実行するのはヘビーです。</p>
+
+<p>そこでCocoaPodsとプロジェクトファイルの統合を事前に手動で行う方法を紹介します。この方法では <code>Podfile.lock</code>と <code>Pods/Manifest.lock</code>に差分がない場合においては<code>pod install</code>を実装せずに済むため、プロジェクトファイルの生成時間を大幅に削減できます。</p>
+
+<p>CocoaPodsの内部実装に依存する形になるのでCocoaPodsの変更に追従していく必要がありますが、やることは単純なので大まかな統合の処理は変わらないはずです。</p>
+
+<h2>詳細</h2>
+
+<p>実はCocoaPodsがプロジェクトファイルに行う処理はそこまで多くありません。</p>
+
+<p>実際に<code>pod install</code> を行ったときに発生するxcodeprojへのdiffがこちらです。</p>
+
+<p><details>
+<script src="https://gist.github.com/kateinoigakukun/be8d1c594c973534d5152233eea1bf19.js"> </script><cite class="hatena-citation"><a href="https://gist.github.com/kateinoigakukun/be8d1c594c973534d5152233eea1bf19">gist.github.com</a></cite>
+</details></p>
+
+<ol>
+<li>ビルドをトリガーするためのダミーターゲット（Pods_XXX.framework）Dependenciesに追加</li>
+<li>CocoaPodsが生成したxcconfigをプロジェクトのベースconfigに設定（他のxcconfigが設定されていない場合のみ）</li>
+<li>EmbedするDynamic FrameworkをアプリにコピーするBuild Scriptを注入（ <code>[CP] Embed Pods Frameworks</code> ）</li>
+<li>ライブラリが使うリソースをアプリにコピーするBuild Scriptを注入 （ <code>[CP] Copy Pods Resources</code> ）</li>
+<li><code>pod install</code> が実行されていない場合にビルドをfailさせる Build Scriptを注入（ <code>[CP] Check Pods Manifest.lock</code>）</li>
+</ol>
+
+
+<p>だけです。ライブラリのビルドをトリガーする部分はXcodeのビルドシステムに乗っているため、特に考えることはないです。
+それぞれ順番に何をするか説明します。</p>
+
+<h3>0. （下準備）</h3>
+
+<p>CocoaPodsがプロジェクトファイルに手を加えないようにPodfileで <code>integrate_targets: false</code>を指定します。</p>
+
+<pre class="code" data-lang="" data-unlink>install! &#39;cocoapods&#39;, integrate_targets: false
+target &#39;XcodeGenWithPods&#39; do
+  use_frameworks!
+  pod &#34;Alamofire&#34;
+end</pre>
+
+
+<p>あと、生成されたPods.xcodeprojとメインのプロジェクトファイルを束ねるxcworkspaceを作っておきます。通常はCocoaPodsが生成しますが自動統合を切ったため自分で用意する必要があります。</p>
+
+<h3>1. ビルドをトリガーするためのダミーターゲット（Pods_XXX.framework）Dependenciesに追加</h3>
+
+<p>CocoaPodsのビルドシステムは自前で色々やっているので基本的にXcodeのビルドシステムに依存していません。ただ、そのままではXcodeのビルドボタンを押した時に何もビルドされないので、最初のビルドを発火させるためダミーターゲットを用意しています。
+これを依存ターゲットとしてプロジェクトファイルに追加する必要があります。プロジェクトファイルを跨いだフレームワークの参照なので、project.ymlに<code>implicit</code>オプションを付ける必要があります。</p>
+
+<pre class="code lang-yaml" data-lang="yaml" data-unlink>    <span class="synIdentifier">dependencies</span><span class="synSpecial">:</span>
+      <span class="synStatement">- </span><span class="synIdentifier">framework</span><span class="synSpecial">:</span> <span class="synConstant">&quot;Pods-${target_name}.framework&quot;</span>
+        <span class="synIdentifier">implicit</span><span class="synSpecial">:</span> <span class="synConstant">true</span>
+        <span class="synIdentifier">embed</span><span class="synSpecial">:</span> <span class="synConstant">false</span>
+</pre>
+
+
+<h3>2. CocoaPodsが生成したxcconfigをプロジェクトのベースconfigに設定</h3>
+
+<p>これはCocoaPodsを使いつつxcconfigを使うときと同じテクニックです。CocoaPodsはアプリのビルド時に正しくヘッダを探したり、ライブラリをリンクするために様々なフラグをxcconfig経由で渡しています。そのため、XcodeGenからプロジェクトファイルを生成する際にはそれを指定する必要があります。</p>
+
+<pre class="code lang-yaml" data-lang="yaml" data-unlink><span class="synIdentifier">targets</span><span class="synSpecial">:</span>
+  <span class="synConstant">&quot;XcodeGenWithPods&quot;</span><span class="synSpecial">:</span>
+    <span class="synIdentifier">configFiles</span><span class="synSpecial">:</span>
+      <span class="synIdentifier">Debug</span><span class="synSpecial">:</span> Pods/Target Support Files/Pods-${target_name}/Pods-${target_name}.debug.xcconfig
+      <span class="synIdentifier">Release</span><span class="synSpecial">:</span> Pods/Target Support Files/Pods-${target_name}/Pods-${target_name}.release.xcconfig
+</pre>
+
+
+<h3>3, 4, 5. Build Scriptを注入</h3>
+
+<p>Dynamicなフレームワークとしてライブラリをビルドした場合、実行時に.frameworkファイルを参照するので成果物をアプリにコピーします。
+また、Staticなlibraryとしてビルドするとリソースをアプリに直接コピーする必要があるので、その処理を発火させます。</p>
+
+<p>これら２つのシェルスクリプトはCocoaPodsが必要に応じて生成するので、存在しなければ実行する必要はありません。</p>
+
+<pre class="code lang-yaml" data-lang="yaml" data-unlink>    <span class="synIdentifier">preBuildScripts</span><span class="synSpecial">:</span>
+      <span class="synStatement">- </span><span class="synIdentifier">name</span><span class="synSpecial">:</span> <span class="synConstant">&quot;[CP] Check Pods Manifest.lock&quot;</span>
+        <span class="synIdentifier">path</span><span class="synSpecial">:</span> /bin/sh
+        <span class="synIdentifier">script</span><span class="synSpecial">:</span> |
+          diff <span class="synConstant">&quot;${PODS_PODFILE_DIR_PATH}/Podfile.lock&quot;</span> <span class="synConstant">&quot;${PODS_ROOT}/Manifest.lock&quot;</span> &gt; /dev/<span class="synConstant">null</span>
+          if <span class="synSpecial">[</span> $? != <span class="synConstant">0</span> <span class="synSpecial">]</span> ; then
+             <span class="synComment"> # print error to STDERR</span>
+              echo <span class="synConstant">&quot;error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.&quot;</span> &gt;<span class="synType">&amp;2</span>
+              exit <span class="synConstant">1</span>
+          fi
+         <span class="synComment"> # This output is used by Xcode 'outputs' to avoid re-running this script phase.</span>
+          echo <span class="synConstant">&quot;SUCCESS&quot;</span> &gt; <span class="synConstant">&quot;${SCRIPT_OUTPUT_FILE_0}&quot;</span>
+        <span class="synIdentifier">inputFiles</span><span class="synSpecial">:</span>
+          <span class="synStatement">- </span><span class="synConstant">&quot;${PODS_PODFILE_DIR_PATH}/Podfile.lock&quot;</span>
+          <span class="synStatement">- </span><span class="synConstant">&quot;${PODS_ROOT}/Manifest.lock&quot;</span>
+        <span class="synIdentifier">outputFiles</span><span class="synSpecial">:</span>
+          <span class="synStatement">- </span><span class="synConstant">&quot;$(DERIVED_FILE_DIR)/Pods-${target_name}-checkManifestLockResult.txt&quot;</span>
+    <span class="synIdentifier">postCompileScripts</span><span class="synSpecial">:</span>
+      <span class="synStatement">- </span><span class="synIdentifier">name</span><span class="synSpecial">:</span> <span class="synConstant">&quot;[CP] Embed Pods Frameworks&quot;</span>
+        <span class="synIdentifier">path</span><span class="synSpecial">:</span> /bin/sh
+        <span class="synIdentifier">script</span><span class="synSpecial">:</span> <span class="synConstant">'&quot;${PODS_ROOT}/Target Support Files/Pods-${target_name}/Pods-${target_name}-frameworks.sh&quot;'</span>
+      <span class="synStatement">- </span><span class="synIdentifier">name</span><span class="synSpecial">:</span> <span class="synConstant">&quot;[CP] Copy Pods Resources&quot;</span>
+        <span class="synIdentifier">path</span><span class="synSpecial">:</span> /bin/sh
+        <span class="synIdentifier">script</span><span class="synSpecial">:</span> <span class="synConstant">'&quot;${PODS_ROOT}/Target Support Files/Pods-${target_name}/Pods-${target_name}-resources.sh&quot;'</span>
+</pre>
+
+
+<h2>サンプルプロジェクト</h2>
+
+<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fkateinoigakukun%2FXcodeGenWithPods" title="kateinoigakukun/XcodeGenWithPods" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/kateinoigakukun/XcodeGenWithPods">github.com</a></cite></p>
+
+<p><code>targetTemplates</code>というXcodeGenの素晴らしい機能を使って汎用的なproject.ymlにしているので、これをコピペするだけで大抵の環境では動くはずです。</p>
+
+<p>Staticライブラリにしてる場合やabstract targetを使っている場合、多分動かないので適宜変更してください。</p>

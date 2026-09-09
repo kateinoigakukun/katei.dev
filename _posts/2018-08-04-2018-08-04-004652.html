@@ -1,0 +1,236 @@
+---
+layout: post
+title: "Swift LLVM IRを読む - classの初期化"
+date: 2018-08-04 00:46:52 +0900
+language: ja
+source_url: https://kateinoigakukun.hatenablog.com/entry/2018/08/04/004652
+permalink: /blog/2018/08/04/004652/
+---
+
+<p><code>swiftc -emit-ir foo.swift</code> で出力したLLVM IRを読んだ際のメモ</p>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">class</span> <span class="synType">A</span> {}
+<span class="synPreProc">let</span> <span class="synIdentifier">a</span> <span class="synIdentifier">=</span> A()
+</pre>
+
+
+<p>このコードからLLVM IRを出力してmain関数のみを取り出したのが以下である。</p>
+
+<pre class="code lang-llvm" data-lang="llvm" data-unlink><span class="synStatement">define</span> <span class="synType">i32</span> <span class="synIdentifier">@main</span>(<span class="synType">i32</span>, <span class="synType">i8</span>**) #<span class="synConstant">0</span> {
+<span class="synStatement">entry:</span>
+  <span class="synIdentifier">%2</span> = <span class="synStatement">bitcast</span> <span class="synType">i8</span>** <span class="synIdentifier">%1</span> <span class="synStatement">to</span> <span class="synType">i8</span>*
+  <span class="synIdentifier">%3</span> = <span class="synStatement">call</span> <span class="synStatement">swiftcc</span> <span class="synIdentifier">%swift.metadata_response</span> @<span class="synConstant">&quot;$S11class_alloc1ACMa&quot;</span>(<span class="synType">i64</span> <span class="synConstant">0</span>) #<span class="synConstant">3</span>
+  <span class="synIdentifier">%4</span> = <span class="synStatement">extractvalue</span> <span class="synIdentifier">%swift.metadata_response</span> <span class="synIdentifier">%3</span>, <span class="synConstant">0</span>
+  <span class="synIdentifier">%5</span> = <span class="synStatement">call</span> <span class="synStatement">swiftcc</span> <span class="synIdentifier">%T11class_alloc1AC</span>* @<span class="synConstant">&quot;$S11class_alloc1ACACycfC&quot;</span>(<span class="synIdentifier">%swift.type</span>* swiftself <span class="synIdentifier">%4</span>)
+  <span class="synStatement">store</span> <span class="synIdentifier">%T11class_alloc1AC</span>* <span class="synIdentifier">%5</span>, <span class="synIdentifier">%T11class_alloc1AC</span>** @<span class="synConstant">&quot;$S11class_alloc1aAA1ACvp&quot;</span>, <span class="synStatement">align</span> <span class="synConstant">8</span>
+  <span class="synStatement">ret</span> <span class="synType">i32</span> <span class="synConstant">0</span>
+}
+</pre>
+
+
+<p><code>%2</code>はどこからも使われていないので一旦無視するとして、<code>%3</code>から読み進めていこう。</p>
+
+<p>まず、<code>$S11class_alloc1ACMa</code>という関数を呼び出している。<code>$S11class_alloc1ACMa</code> はdemangleすると <code>type metadata accessor for class_alloc.A</code>となる。つまり、class Aのメタデータのaccessorだろう。</p>
+
+<pre class="code lang-llvm" data-lang="llvm" data-unlink><span class="synIdentifier">%3</span> = <span class="synStatement">call</span> <span class="synStatement">swiftcc</span> <span class="synIdentifier">%swift.metadata_response</span> @<span class="synConstant">&quot;$S11class_alloc1ACMa&quot;</span>(<span class="synType">i64</span> <span class="synConstant">0</span>) #<span class="synConstant">3</span>
+</pre>
+
+
+<p>では、そのアクセサを見ていこう。</p>
+
+<pre class="code lang-llvm" data-lang="llvm" data-unlink><span class="synStatement">define</span> <span class="synStatement">hidden</span> <span class="synStatement">swiftcc</span> <span class="synIdentifier">%swift.metadata_response</span> @<span class="synConstant">&quot;$S11class_alloc1ACMa&quot;</span>(<span class="synType">i64</span>) #<span class="synConstant">1</span> {
+<span class="synStatement">entry:</span>
+  <span class="synIdentifier">%1</span> = <span class="synStatement">load</span> <span class="synIdentifier">%swift.type</span>*, <span class="synIdentifier">%swift.type</span>** @<span class="synConstant">&quot;$S11class_alloc1ACML&quot;</span>, <span class="synStatement">align</span> <span class="synConstant">8</span>
+  <span class="synIdentifier">%2</span> = <span class="synStatement">icmp</span> <span class="synStatement">eq</span> <span class="synIdentifier">%swift.type</span>* <span class="synIdentifier">%1</span>, <span class="synConstant">null</span>
+  <span class="synStatement">br</span> <span class="synType">i1</span> <span class="synIdentifier">%2</span>, <span class="synType">label</span> <span class="synIdentifier">%cacheIsNull</span>, <span class="synType">label</span> <span class="synIdentifier">%cont</span>
+
+<span class="synStatement">cacheIsNull:</span>                                      <span class="synComment">; preds = %entry</span>
+  <span class="synIdentifier">%3</span> = <span class="synStatement">call</span> <span class="synIdentifier">%objc_class</span>* <span class="synIdentifier">@swift_getInitializedObjCClass</span>(
+    <span class="synIdentifier">%objc_class</span>* <span class="synStatement">bitcast</span> (
+        <span class="synType">i64</span>* <span class="synStatement">getelementptr</span> <span class="synStatement">inbounds</span> (
+            &lt;{
+              <span class="synType">void</span> (<span class="synIdentifier">%T11class_alloc1AC</span>*)*, <span class="synType">i8</span>**, <span class="synType">i64</span>, <span class="synIdentifier">%objc_class</span>*,
+              <span class="synIdentifier">%swift.opaque</span>*, <span class="synIdentifier">%swift.opaque</span>*, <span class="synType">i64</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i16</span>,
+              <span class="synType">i16</span>, <span class="synType">i32</span>, <span class="synType">i32</span>,
+              &lt;{
+                <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>,
+                <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synIdentifier">%swift.method_descriptor</span>
+              }&gt;*,
+              <span class="synType">i8</span>*, <span class="synIdentifier">%T11class_alloc1AC</span>* (<span class="synIdentifier">%T11class_alloc1AC</span>*)*
+            }&gt;,
+            &lt;{
+              <span class="synType">void</span> (<span class="synIdentifier">%T11class_alloc1AC</span>*)*, <span class="synType">i8</span>**, <span class="synType">i64</span>, <span class="synIdentifier">%objc_class</span>*,
+              <span class="synIdentifier">%swift.opaque</span>*, <span class="synIdentifier">%swift.opaque</span>*, <span class="synType">i64</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i16</span>,
+              <span class="synType">i16</span>, <span class="synType">i32</span>, <span class="synType">i32</span>,
+              &lt;{
+                <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>,
+                <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synIdentifier">%swift.method_descriptor</span>
+              }&gt;*,
+              <span class="synType">i8</span>*, <span class="synIdentifier">%T11class_alloc1AC</span>* (<span class="synIdentifier">%T11class_alloc1AC</span>*)*
+            }&gt;* @<span class="synConstant">&quot;$S11class_alloc1ACMf&quot;</span>, <span class="synType">i32</span> <span class="synConstant">0</span>, <span class="synType">i32</span> <span class="synConstant">2</span>
+        ) <span class="synStatement">to</span> <span class="synIdentifier">%objc_class</span>*
+     )
+  )
+  <span class="synIdentifier">%4</span> = <span class="synStatement">bitcast</span> <span class="synIdentifier">%objc_class</span>* <span class="synIdentifier">%3</span> <span class="synStatement">to</span> <span class="synIdentifier">%swift.type</span>*
+  <span class="synStatement">store</span> <span class="synStatement">atomic</span> <span class="synIdentifier">%swift.type</span>* <span class="synIdentifier">%4</span>, <span class="synIdentifier">%swift.type</span>** @<span class="synConstant">&quot;$S11class_alloc1ACML&quot;</span> <span class="synStatement">release</span>, <span class="synStatement">align</span> <span class="synConstant">8</span>
+  <span class="synStatement">br</span> <span class="synType">label</span> <span class="synIdentifier">%cont</span>
+
+<span class="synStatement">cont:</span>                                             <span class="synComment">; preds = %cacheIsNull, %entry</span>
+  <span class="synIdentifier">%5</span> = <span class="synStatement">phi</span> <span class="synIdentifier">%swift.type</span>* [ <span class="synIdentifier">%1</span>, <span class="synIdentifier">%entry</span> ], [ <span class="synIdentifier">%4</span>, <span class="synIdentifier">%cacheIsNull</span> ]
+  <span class="synIdentifier">%6</span> = <span class="synStatement">insertvalue</span> <span class="synIdentifier">%swift.metadata_response</span> <span class="synConstant">undef</span>, <span class="synIdentifier">%swift.type</span>* <span class="synIdentifier">%5</span>, <span class="synConstant">0</span>
+  <span class="synIdentifier">%7</span> = <span class="synStatement">insertvalue</span> <span class="synIdentifier">%swift.metadata_response</span> <span class="synIdentifier">%6</span>, <span class="synType">i64</span> <span class="synConstant">0</span>, <span class="synConstant">1</span>
+  <span class="synStatement">ret</span> <span class="synIdentifier">%swift.metadata_response</span> <span class="synIdentifier">%7</span>
+}
+</pre>
+
+
+<p><code>$S11class_alloc1ACML</code>は<code>lazy cache variable for type metadata for class_alloc.A</code>。文字通りmetadataのキャッシュだろう。初回のアクセスではキャッシュされていないので<code>%1</code>には<code>null</code>が入る。そのため、<code>%2</code>が<code>true</code>となり<code>cacheIsNull</code>にジャンプする。</p>
+
+<pre class="code lang-llvm" data-lang="llvm" data-unlink><span class="synIdentifier">%1</span> = <span class="synStatement">load</span> <span class="synIdentifier">%swift.type</span>*, <span class="synIdentifier">%swift.type</span>** @<span class="synConstant">&quot;$S11class_alloc1ACML&quot;</span>, <span class="synStatement">align</span> <span class="synConstant">8</span>
+<span class="synIdentifier">%2</span> = <span class="synStatement">icmp</span> <span class="synStatement">eq</span> <span class="synIdentifier">%swift.type</span>* <span class="synIdentifier">%1</span>, <span class="synConstant">null</span>
+<span class="synStatement">br</span> <span class="synType">i1</span> <span class="synIdentifier">%2</span>, <span class="synType">label</span> <span class="synIdentifier">%cacheIsNull</span>, <span class="synType">label</span> <span class="synIdentifier">%cont</span>
+</pre>
+
+
+<p>さて、<code>cacheIsNull</code>を見ていくと、重複した長い型があるのでこれに一旦適当な名前を勝手に付けよう。</p>
+
+<pre class="code lang-llvm" data-lang="llvm" data-unlink><span class="synIdentifier">%ft_metadata</span> = &lt;{
+    <span class="synType">void</span> (<span class="synIdentifier">%T11class_alloc1AC</span>*)*,
+    <span class="synType">i8</span>**,
+    <span class="synType">i64</span>,
+    <span class="synIdentifier">%objc_class</span>*,
+    <span class="synIdentifier">%swift.opaque</span>*,
+    <span class="synIdentifier">%swift.opaque</span>*,
+    <span class="synType">i64</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>,
+    <span class="synType">i16</span>, <span class="synType">i16</span>, <span class="synType">i32</span>, <span class="synType">i32</span>,
+    &lt;{
+        <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>,
+        <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synIdentifier">%swift.method_descriptor</span>
+    }&gt;*,
+    <span class="synType">i8</span>*, <span class="synIdentifier">%T11class_alloc1AC</span>* (<span class="synIdentifier">%T11class_alloc1AC</span>*)*
+}&gt;,
+</pre>
+
+
+<p><code>%3</code>は、</p>
+
+<ol>
+<li><code>%ft_metadata</code>型のポインタから0番目の要素の2番目のフィールド(<code>i64</code>型)を取得</li>
+<li>それを<code>%objc_class</code>のポインタにキャスト</li>
+<li><code>%objc_class</code>のポインタを引数に取り、<code>swift_getInitializedObjCClass</code>という関数を呼び出す</li>
+<li><code>%objc_class*</code>型が<code>%3</code>に格納される</li>
+</ol>
+
+
+<p>といった流れで詰められる。
+では、<code>%ft_metadata*</code>型の<code>@S11class_alloc1ACMf</code>はどのような構造になっているだろうか。</p>
+
+<pre class="code lang-llvm" data-lang="llvm" data-unlink><span class="synIdentifier">%3</span> = <span class="synStatement">call</span> <span class="synIdentifier">%objc_class</span>* <span class="synIdentifier">@swift_getInitializedObjCClass</span>(
+  <span class="synIdentifier">%objc_class</span>* <span class="synStatement">bitcast</span> (
+      <span class="synType">i64</span>* <span class="synStatement">getelementptr</span> <span class="synStatement">inbounds</span> (
+          <span class="synIdentifier">%ft_metadata</span>, <span class="synIdentifier">%ft_metadata</span>* @<span class="synConstant">&quot;$S11class_alloc1ACMf&quot;</span>, <span class="synType">i32</span> <span class="synConstant">0</span>, <span class="synType">i32</span> <span class="synConstant">2</span>
+      ) <span class="synStatement">to</span> <span class="synIdentifier">%objc_class</span>*
+   )
+)
+</pre>
+
+
+<p><code>@S11class_alloc1ACMf</code>は<code>full type metadata for class_alloc.A</code>。
+<code>@S11class_alloc1ACMf</code>の定義を見ると、上で取り出したポインタの実体が<code>@S11class_alloc1ACMm</code>であることが分かる。</p>
+
+<pre class="code lang-llvm" data-lang="llvm" data-unlink>@<span class="synConstant">&quot;$S11class_alloc1ACMf&quot;</span> = <span class="synStatement">internal</span> <span class="synStatement">global</span> &lt;{
+    <span class="synType">void</span> (<span class="synIdentifier">%T11class_alloc1AC</span>*)*,
+    <span class="synType">i8</span>**, <span class="synType">i64</span>,
+    <span class="synIdentifier">%objc_class</span>*, <span class="synIdentifier">%swift.opaque</span>*, <span class="synIdentifier">%swift.opaque</span>*, <span class="synType">i64</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i16</span>, <span class="synType">i16</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, &lt;{
+        <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>,
+        <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>,
+        <span class="synIdentifier">%swift.method_descriptor</span>
+    }&gt;*,
+    <span class="synType">i8</span>*, <span class="synIdentifier">%T11class_alloc1AC</span>* (<span class="synIdentifier">%T11class_alloc1AC</span>*)*
+}&gt;
+&lt;{
+    <span class="synType">void</span> (<span class="synIdentifier">%T11class_alloc1AC</span>*)* @<span class="synConstant">&quot;$S11class_alloc1ACfD&quot;</span>,
+    <span class="synType">i8</span>** @<span class="synConstant">&quot;$SBoWV&quot;</span>,
+    <span class="synType">i64</span> <span class="synStatement">ptrtoint</span> (<span class="synIdentifier">%objc_class</span>* @<span class="synConstant">&quot;$S11class_alloc1ACMm&quot;</span> <span class="synStatement">to</span> <span class="synType">i64</span>),
+    <span class="synIdentifier">%objc_class</span>* @<span class="synConstant">&quot;OBJC_CLASS_$_SwiftObject&quot;</span>,
+    <span class="synIdentifier">%swift.opaque</span>* <span class="synIdentifier">@_objc_empty_cache</span>,
+    <span class="synIdentifier">%swift.opaque</span>* <span class="synConstant">null</span>,
+    <span class="synType">i64</span> <span class="synStatement">add</span> (<span class="synType">i64</span> <span class="synStatement">ptrtoint</span> ({ <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i8</span>*, <span class="synType">i8</span>*, <span class="synType">i8</span>*, <span class="synType">i8</span>*, <span class="synType">i8</span>*, <span class="synType">i8</span>*, <span class="synType">i8</span>* }* <span class="synIdentifier">@_DATA__TtC11class_alloc1A</span> <span class="synStatement">to</span> <span class="synType">i64</span>), <span class="synType">i64</span> <span class="synConstant">1</span>),
+    <span class="synType">i32</span> <span class="synConstant">3</span>, <span class="synType">i32</span> <span class="synConstant">0</span>, <span class="synType">i32</span> <span class="synConstant">16</span>, <span class="synType">i16</span> <span class="synConstant">7</span>, <span class="synType">i16</span> <span class="synConstant">0</span>, <span class="synType">i32</span> <span class="synConstant">104</span>, <span class="synType">i32</span> <span class="synConstant">16</span>,
+    &lt;{ <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synIdentifier">%swift.method_descriptor</span> }&gt;* @<span class="synConstant">&quot;$S11class_alloc1ACMn&quot;</span>,
+    <span class="synType">i8</span>* <span class="synConstant">null</span>,
+    <span class="synIdentifier">%T11class_alloc1AC</span>* (<span class="synIdentifier">%T11class_alloc1AC</span>*)* @<span class="synConstant">&quot;$S11class_alloc1ACACycfc&quot;</span>
+}&gt;, <span class="synStatement">align</span> <span class="synConstant">8</span>
+</pre>
+
+
+
+
+<pre class="code lang-llvm" data-lang="llvm" data-unlink>@<span class="synConstant">&quot;$S11class_alloc1ACMm&quot;</span> = <span class="synStatement">hidden</span> <span class="synStatement">global</span> <span class="synIdentifier">%objc_class</span> {
+    <span class="synIdentifier">%objc_class</span>* @<span class="synConstant">&quot;OBJC_METACLASS_$_SwiftObject&quot;</span>,
+    <span class="synIdentifier">%objc_class</span>* @<span class="synConstant">&quot;OBJC_METACLASS_$_SwiftObject&quot;</span>,
+    <span class="synIdentifier">%swift.opaque</span>* <span class="synIdentifier">@_objc_empty_cache</span>,
+    <span class="synIdentifier">%swift.opaque</span>* <span class="synConstant">null</span>,
+    <span class="synType">i64</span> <span class="synStatement">ptrtoint</span> ({ <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i8</span>*, <span class="synType">i8</span>*, <span class="synType">i8</span>*, <span class="synType">i8</span>*, <span class="synType">i8</span>*, <span class="synType">i8</span>*, <span class="synType">i8</span>* }* <span class="synIdentifier">@_METACLASS_DATA__TtC11class_alloc1A</span> <span class="synStatement">to</span> <span class="synType">i64</span>)
+}, <span class="synStatement">align</span> <span class="synConstant">8</span>
+</pre>
+
+
+<p><code>cacheIsNull</code>の処理に戻ると、<code>%objc_class*</code>を<code>%swift.class*</code>にキャストして、<code>@"S11class_alloc1ACML"</code>にキャッシュしている。
+あとは<code>%cont</code>で<code>%metadata_response</code>を組み立てるだけ。</p>
+
+<p><code>%objc_class*</code>を<code>%swift.class*</code>にキャストできるのは、<code>%swift.type = type { i64 }</code>なのでメモリレイアウトが被っているから。</p>
+
+<pre class="code lang-llvm" data-lang="llvm" data-unlink><span class="synIdentifier">%4</span> = <span class="synStatement">bitcast</span> <span class="synIdentifier">%objc_class</span>* <span class="synIdentifier">%3</span> <span class="synStatement">to</span> <span class="synIdentifier">%swift.type</span>*
+<span class="synStatement">store</span> <span class="synStatement">atomic</span> <span class="synIdentifier">%swift.type</span>* <span class="synIdentifier">%4</span>, <span class="synIdentifier">%swift.type</span>** @<span class="synConstant">&quot;$S11class_alloc1ACML&quot;</span> <span class="synStatement">release</span>, <span class="synStatement">align</span> <span class="synConstant">8</span>
+<span class="synStatement">br</span> <span class="synType">label</span> <span class="synIdentifier">%cont</span>
+</pre>
+
+
+<p>無事に<code>%metadata_response</code>を組み立てられたので<code>main</code>に戻ろう。
+得られた<code>%metadata_response</code>から0番目のフィールドを取得する(<code>%swift.type*</code>型、実体は<code>%objc_class*</code>)</p>
+
+<p>そのメタタイプを引数に<code>@"S11class_alloc1ACACycfC"</code>を呼んでいる。</p>
+
+<pre class="code lang-llvm" data-lang="llvm" data-unlink><span class="synIdentifier">%4</span> = <span class="synStatement">extractvalue</span> <span class="synIdentifier">%swift.metadata_response</span> <span class="synIdentifier">%3</span>, <span class="synConstant">0</span>
+<span class="synIdentifier">%5</span> = <span class="synStatement">call</span> <span class="synStatement">swiftcc</span> <span class="synIdentifier">%T11class_alloc1AC</span>* @<span class="synConstant">&quot;$S11class_alloc1ACACycfC&quot;</span>(<span class="synIdentifier">%swift.type</span>* swiftself <span class="synIdentifier">%4</span>)
+<span class="synStatement">store</span> <span class="synIdentifier">%T11class_alloc1AC</span>* <span class="synIdentifier">%5</span>, <span class="synIdentifier">%T11class_alloc1AC</span>** @<span class="synConstant">&quot;$S11class_alloc1aAA1ACvp&quot;</span>, <span class="synStatement">align</span> <span class="synConstant">8</span>
+</pre>
+
+
+<p>さて、<code>@"S11class_alloc1ACACycfC"</code>を読んでいこう。</p>
+
+<p>ここで再び<code>@"$S11class_alloc1ACMa"</code>が呼ばれ、<code>%metadata_response</code>から<code>%swift.type</code>を取得している。<code>@swift_allocObject</code>によってメモリ領域を確保し、<code>%T11class_alloc1AC</code>型(<code>A</code>型)にキャストする。こうして<code>A</code>型のインスタンスを作ることができる。</p>
+
+<pre class="code lang-llvm" data-lang="llvm" data-unlink><span class="synStatement">define</span> <span class="synStatement">hidden</span> <span class="synStatement">swiftcc</span> <span class="synIdentifier">%T11class_alloc1AC</span>* @<span class="synConstant">&quot;$S11class_alloc1ACACycfC&quot;</span>(<span class="synIdentifier">%swift.type</span>* swiftself) #<span class="synConstant">0</span> {
+<span class="synStatement">entry:</span>
+  <span class="synIdentifier">%1</span> = <span class="synStatement">call</span> <span class="synStatement">swiftcc</span> <span class="synIdentifier">%swift.metadata_response</span> @<span class="synConstant">&quot;$S11class_alloc1ACMa&quot;</span>(<span class="synType">i64</span> <span class="synConstant">0</span>) #<span class="synConstant">3</span>
+  <span class="synIdentifier">%2</span> = <span class="synStatement">extractvalue</span> <span class="synIdentifier">%swift.metadata_response</span> <span class="synIdentifier">%1</span>, <span class="synConstant">0</span>
+  <span class="synIdentifier">%3</span> = <span class="synStatement">call</span> <span class="synStatement">noalias</span> <span class="synIdentifier">%swift.refcounted</span>* <span class="synIdentifier">@swift_allocObject</span>(<span class="synIdentifier">%swift.type</span>* <span class="synIdentifier">%2</span>, <span class="synType">i64</span> <span class="synConstant">16</span>, <span class="synType">i64</span> <span class="synConstant">7</span>) #<span class="synConstant">2</span>
+  <span class="synIdentifier">%4</span> = <span class="synStatement">bitcast</span> <span class="synIdentifier">%swift.refcounted</span>* <span class="synIdentifier">%3</span> <span class="synStatement">to</span> <span class="synIdentifier">%T11class_alloc1AC</span>*
+  <span class="synIdentifier">%5</span> = <span class="synStatement">call</span> <span class="synStatement">swiftcc</span> <span class="synIdentifier">%T11class_alloc1AC</span>* @<span class="synConstant">&quot;$S11class_alloc1ACACycfc&quot;</span>(<span class="synIdentifier">%T11class_alloc1AC</span>* swiftself <span class="synIdentifier">%4</span>)
+  <span class="synStatement">ret</span> <span class="synIdentifier">%T11class_alloc1AC</span>* <span class="synIdentifier">%5</span>
+}
+
+<span class="synStatement">define</span> <span class="synStatement">hidden</span> <span class="synStatement">swiftcc</span> <span class="synIdentifier">%T11class_alloc1AC</span>* @<span class="synConstant">&quot;$S11class_alloc1ACACycfc&quot;</span>(<span class="synIdentifier">%T11class_alloc1AC</span>* swiftself) #<span class="synConstant">0</span> {
+<span class="synStatement">entry:</span>
+  <span class="synStatement">ret</span> <span class="synIdentifier">%T11class_alloc1AC</span>* <span class="synIdentifier">%0</span>
+}
+</pre>
+
+
+<p>おしまい。</p>
+
+<h2>追記 2018/08/04</h2>
+
+<p>メタデータのドキュメントを見つけた。どうやらobjcとの互換のためにkindフィールドが面倒くさくなってるっぽい。試しにstructでIRを吐いてみたところ、kindは1が直で書いてあった。</p>
+
+<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fapple%2Fswift%2Fblob%2Fmaster%2Fdocs%2FABI%2FTypeMetadata.rst" title="apple/swift" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/apple/swift/blob/master/docs/ABI/TypeMetadata.rst">github.com</a></cite></p>
+
+<p>アクセサも一つの式で表現されてた。</p>
+
+<pre class="code lang-llvm" data-lang="llvm" data-unlink><span class="synStatement">define</span> <span class="synStatement">hidden</span> <span class="synStatement">swiftcc</span> <span class="synIdentifier">%swift.metadata_response</span> @<span class="synConstant">&quot;$S12AnimalSimple3CatVMa&quot;</span>(<span class="synType">i64</span>) #<span class="synConstant">2</span> {
+<span class="synStatement">entry:</span>
+  <span class="synStatement">ret</span> <span class="synIdentifier">%swift.metadata_response</span> { <span class="synIdentifier">%swift.type</span>* <span class="synStatement">bitcast</span> (<span class="synType">i64</span>* <span class="synStatement">getelementptr</span> <span class="synStatement">inbounds</span> (&lt;{ <span class="synType">i8</span>**, <span class="synType">i64</span>, &lt;{ <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span> }&gt;* }&gt;, &lt;{ <span class="synType">i8</span>**, <span class="synType">i64</span>, &lt;{ <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span>, <span class="synType">i32</span> }&gt;* }&gt;* @<span class="synConstant">&quot;$S12AnimalSimple3CatVMf&quot;</span>, <span class="synType">i32</span> <span class="synConstant">0</span>, <span class="synType">i32</span> <span class="synConstant">1</span>) <span class="synStatement">to</span> <span class="synIdentifier">%swift.type</span>*), <span class="synType">i64</span> <span class="synConstant">0</span> }
+}
+</pre>

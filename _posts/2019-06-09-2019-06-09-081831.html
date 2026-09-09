@@ -1,0 +1,219 @@
+---
+layout: post
+title: "Inside SwiftUI (About @State)"
+date: 2019-06-09 08:18:31 +0900
+language: en
+source_url: https://kateinoigakukun.hatenablog.com/entry/2019/06/09/081831
+permalink: /blog/2019/06/09/081831/
+---
+
+<p>SwiftUI was announced at this WWDC and we've tried it for a few days.
+This WWDC was the moment everything changed for me.</p>
+
+<p>But SwiftUI is still a private source software as well as UIKit and we need to develop applications while speculating the behavior of it.</p>
+
+<p>There is some features which I felt is a mystery in SwiftUI. I investigated them and internal implementation of SwiftUI.</p>
+
+<p>(This post is just a my prediction)</p>
+
+<h2><code>@State</code></h2>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synType">@State</span> <span class="synPreProc">var</span> <span class="synIdentifier">value</span><span class="synSpecial">:</span> <span class="synType">Int</span>
+</pre>
+
+
+<p>You may write this many time while doing tutorials of SwiftUI. Do you understand how <code>State</code> works?</p>
+
+<p>This feature uses
+<a href="https://github.com/apple/swift-evolution/blob/master/proposals/0258-property-delegates.md">Property Delegates</a> introduced from Swift5.1 and it allows to delegate the implementation of getter and setter to another instance (In this case "another instance" means <code>State</code>).</p>
+
+<p><code>State</code> is a struct defined in SwiftUI using <code>@propertyDelegate</code>. If <code>State</code> is changed, <code>View</code> will be re-rendered.</p>
+
+<p>First, let's implement <code>State</code> by myself!</p>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synType">@propertyDelegate</span>
+<span class="synPreProc">struct</span> <span class="synType">State</span><span class="synSpecial">&lt;Value&gt;</span> {
+    <span class="synPreProc">var</span> <span class="synIdentifier">storage</span><span class="synSpecial">:</span> <span class="synType">Value</span>
+    <span class="synPreProc">var</span> <span class="synIdentifier">value</span><span class="synSpecial">:</span> <span class="synType">Value</span> {
+        <span class="synStatement">get</span> { storage }
+        <span class="synStatement">set</span> {
+            storage <span class="synIdentifier">=</span> newValue
+            renderView()
+        }
+    }
+    <span class="synIdentifier">init</span>(initialValue value<span class="synSpecial">:</span> <span class="synType">Value</span>) {
+        <span class="synIdentifier">self</span>.storage <span class="synIdentifier">=</span> value
+    }
+    
+    <span class="synPreProc">func</span> <span class="synIdentifier">renderView</span>() {
+        <span class="synComment">// ???</span>
+    }
+}
+
+<span class="synPreProc">struct</span> <span class="synType">ContentView</span><span class="synSpecial">:</span> <span class="synType">View</span> {
+    <span class="synType">@State</span> <span class="synPreProc">var</span> <span class="synIdentifier">text</span><span class="synSpecial">:</span> <span class="synType">String</span>
+}
+</pre>
+
+
+<p>It's almost easy to implement but I couldn't figure out how re-render <code>View</code>. SwiftUI seems not re-render the all Views but some particular views whose state is modified. So I need to link <code>ContentView</code> and <code>text: State&lt;String&gt;</code> to update the view.</p>
+
+<h2>Internal structure of <code>State</code></h2>
+
+<p>Let's dump the state instance to investigate internal structure of <code>State</code> by using <code>dump</code>.</p>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">struct</span> <span class="synType">ContentView</span><span class="synSpecial">:</span> <span class="synType">View</span> {
+    <span class="synPreProc">var</span> <span class="synIdentifier">text</span> <span class="synIdentifier">=</span> State<span class="synIdentifier">&lt;</span>String<span class="synIdentifier">&gt;</span>(initialValue<span class="synSpecial">:</span> <span class="synConstant">&quot;Hello&quot;</span>)
+    
+    <span class="synIdentifier">init</span>() {
+        print(<span class="synConstant">&quot;Init:&quot;</span>)
+        dump(text)
+    }
+    
+    <span class="synPreProc">var</span> <span class="synIdentifier">body</span><span class="synSpecial">:</span> <span class="synType">some</span> View {
+        print(<span class="synConstant">&quot;Body:&quot;</span>)
+        dump(text)
+        <span class="synStatement">return</span> Text(<span class="synConstant">&quot;Hello, world&quot;</span>)
+    }
+}
+</pre>
+
+
+<p>I dumped <code>text</code> in <code>init</code> and <code>body</code> but their outputs are different.</p>
+
+<pre class="code" data-lang="" data-unlink>Init:
+▿ SwiftUI.State&lt;Swift.String&gt;
+  - _value: &#34;Hello&#34;
+  - _location: nil
+
+Body:
+▿ SwiftUI.State&lt;Swift.String&gt;
+  - _value: &#34;Hello&#34;
+  ▿ _location: Optional(SwiftUI.StoredLocation&lt;Swift.String&gt;)
+    ▿ some: SwiftUI.StoredLocation&lt;Swift.String&gt; #0
+      - super: SwiftUI.AnyLocation&lt;Swift.String&gt;
+        - super: SwiftUI.AnyLocationBase
+      ▿ viewGraph: Optional(SwiftUI.ViewGraph)
+        ...</pre>
+
+
+<p>This result shows <code>ViewGraph</code> appears after <code>init</code> but before <code>body</code>. It seems there is a way to inject <code>ViewGraph</code> into <code>State</code> outside of View.</p>
+
+<p>Since <code>ViewGraph</code> is an internal type of SwiftUI, I can only speculate it but it seems <code>ViewGraph</code> manages tree structure of View. If this <code>ViewGraph</code> can render <code>View</code> selectively, it's easy to imitate the re-rendering system.</p>
+
+<p>Then, let's fill the body of <code>renderView</code>.</p>
+
+<pre class="code lang-diff" data-lang="diff" data-unlink> @propertyDelegate
+ struct State&lt;Value&gt; {
+     var storage: Value
+<span class="synIdentifier">+    var viewGraph: ViewGraph?</span>
+     var value: Value {
+         get { storage }
+         set {
+             storage = newValue
+             renderView()
+         }
+     }
+     init(initialValue value: Value) {
+         self.storage = value
+     }
+ 
+<span class="synIdentifier">+    func setViewGraph(_ viewGraph: ViewGraph) {</span>
+<span class="synIdentifier">+        self.viewGraph = viewGraph</span>
+<span class="synIdentifier">+    }</span>
+ 
+     func renderView() {
+<span class="synIdentifier">+        viewGraph.render()</span>
+     }
+ }
+</pre>
+
+
+<p>It became clear that how re-render view but it's still uncertain that how inject the <code>ViewGraph</code> into <code>ContentView</code> and make the relationship between <code>State</code> and <code>View</code>.</p>
+
+<p><code>@State</code> filed belongs to View but there is no way to access <code>text: State&lt;String&gt;</code> through <code>View</code> protocol because the field name is not bound by the protocol. For example, it can be easy to inject if <code>State</code> field is bound by the protocol as follows code.
+But actually, fields can be named freely.</p>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">protocol</span> <span class="synType">ViewGraphInjectable</span> {
+    <span class="synPreProc">var</span> <span class="synIdentifier">state</span><span class="synSpecial">:</span> <span class="synType">State</span><span class="synSpecial">&lt;Value&gt;</span> { <span class="synStatement">get</span> }
+}
+
+<span class="synPreProc">struct</span> <span class="synType">ContentView</span><span class="synSpecial">:</span> <span class="synType">View</span>, ViewGraphInjectable {
+    <span class="synType">@State</span> <span class="synPreProc">var</span> <span class="synIdentifier">state</span><span class="synSpecial">:</span> <span class="synType">String</span>
+}
+</pre>
+
+
+<h2>Reflection API</h2>
+
+<p>The only way to get fields without protocol I first thought is <code>Mirror</code>. It's very simple that getting fields of View using <code>Mirror</code> and if there is <code>State</code>, call <code>setViewGraph</code>.</p>
+
+<p>But does SwiftUI really use <code>Mirror</code>? If <code>Mirror</code> is used, <code>CustomReflectable.customMirror</code> should be called and print "Mirror is used!".</p>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">struct</span> <span class="synType">ContentView</span><span class="synSpecial">:</span> <span class="synType">View</span>, CustomReflectable {
+    <span class="synType">@State</span> <span class="synPreProc">var</span> <span class="synIdentifier">text</span><span class="synSpecial">:</span> <span class="synType">String</span>
+    <span class="synPreProc">var</span> <span class="synIdentifier">customMirror</span><span class="synSpecial">:</span> <span class="synType">Mirror</span> {
+        print(<span class="synConstant">&quot;Mirror is used!&quot;</span>)
+        <span class="synStatement">return</span> Mirror(reflecting<span class="synSpecial">:</span> <span class="synType">self</span>)
+    }
+}
+</pre>
+
+
+<p>But <code>customMirror</code> is not called. For checking, I tried to set breakpoint at <code>swift_reflectionMirror_count</code> which is runtime function used by <code>Mirror</code> but it also doesn't break.</p>
+
+<p>This result indicates that SwiftUI get fields without using <code>Mirror</code>.</p>
+
+<h2>Reflection without <code>Mirror</code></h2>
+
+<p>There is still a way to get fields without using <code>Mirror</code>. It's using metadata.</p>
+
+<p><a href="https://twitter.com/kateinoigakukun/status/1109019101224001536">If you don't know metadata, you can learn it by my try! Swift presentation.</a></p>
+
+<p>Metadata has Field Descriptor which contains accessors for fields of the type. It's possible to get fields by using it.</p>
+
+<p>My various experiments result <code>AttributeGraph.framework</code> uses metadata internally. <code>AttributeGraph.framework</code> is a private framework that SwiftUI use internally for constructing <code>ViewGraph</code>.</p>
+
+<p>You can see it by the symbols of the framework.</p>
+
+<pre class="code lang-sh" data-lang="sh" data-unlink>$ nm /System/Library/PrivateFrameworks/AttributeGraph.framework/AttributeGraph
+</pre>
+
+
+<p>There is <code>AG::swift::metadata_visitor::visit_field</code> in the list of symbols. i didn't analysis the whole of assembly code but the name implies that <code>AttributeGraph</code> use visitor pattern to parse metadata. If you set break point, it surely hit.</p>
+
+<h2>Why not use <code>Mirror</code></h2>
+
+<p>So why is metadata used instead of <code>Mirror</code>?  I think it's for performance.</p>
+
+<p><code>Mirror.children</code> is represented as <code>[(label: String, value: Any)]</code> to hold any type of value. But <code>Any</code> wraps the actual value and when you use it, <code>Any</code> is unwrapped every time. SwiftUI uses <code>View</code> many times and the overheads can be critical problem.</p>
+
+<p>On the other hand, Using raw pointer through <code>Field Descriptor</code> doesn't affect performance seriously.</p>
+
+<h2>Flow to update View</h2>
+
+<ol>
+<li>Find <code>State</code> of <code>View</code> using <code>Field Descriptor</code></li>
+<li>Inject <code>ViewGraph</code> into <code>State</code></li>
+<li>Render <code>View.body</code></li>
+<li><code>State</code> is changed</li>
+<li><code>State</code> notify the <code>ViewGraph</code> to update view</li>
+<li>Re-render <code>View.body</code></li>
+</ol>
+
+
+<p>Only Apple knows the actual implementation. But it's certain that <code>AttributeGraph.framework</code> has its own reflection system.</p>
+
+<p>I said "I'm looking forward to your great libraries using metadata" in try! Swift but I had never thought Apple do it, I think Apple started to use metadata because ABI stability was built since Swift5. In fact, ABI stability brings us great benefits!</p>
+
+<p>I'll write an article about <code>DynamicViewProperty</code> by next week.</p>
+
+-----
+COMMENT:
+AUTHOR: SimonL
+DATE: 09/27/2019 12:30:17
+There's a repo named SwiftWebUI which explores the internal implementation of SwiftUI.  The @State implementation is similar to your description in this post.
+https://github.com/SwiftWebUI/SwiftWebUI
+
+And this repo use a library which use Swift metadata to do reflection.
+https://github.com/wickwirew/Runtime

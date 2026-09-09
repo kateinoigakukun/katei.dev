@@ -1,0 +1,170 @@
+---
+layout: post
+title: "ISUCON11予選でSwift移植チャレンジした"
+date: 2021-08-24 09:50:12 +0900
+language: ja
+source_url: https://kateinoigakukun.hatenablog.com/entry/2021/08/24/095012
+permalink: /blog/2021/08/24/095012/
+---
+
+<h2>TR;DR</h2>
+
+<ul>
+<li>ISUCON11予選にSwiftで参加した</li>
+<li>SwiftのConcurrency機能（async/await等 ）の体験最高</li>
+<li>素振りが足りず地区予選敗退</li>
+</ul>
+
+
+<h2>チーム情報</h2>
+
+<ul>
+<li>メンバー
+
+<ul>
+<li><a href="https://twitter.com/___freddi___">@freddi</a></li>
+<li><a href="https://twitter.com/giginet">@giginet</a></li>
+<li><a href="https://twitter.com/kateinoigakukun">@kateinoigakukun</a></li>
+</ul>
+</li>
+<li>全員iOSアプリ開発人材</li>
+<li>共通してそれなりに書ける言語がSwift</li>
+</ul>
+
+
+<h2>移植の覚悟</h2>
+
+<p>ISUCONでは例年、いくつかの言語で対象Webアプリケーションの参考実装が提供されます。しかし、それを使わないといけない、というわけではなくレギュレーション上は他言語の使用が許可されています。</p>
+
+<blockquote><p>許可される事項には、例として以下のような作業が含まれる。</p>
+
+<p>・ ...</p>
+
+<p>・他の言語による再実装</p></blockquote>
+
+<p><a href="https://isucon.net/archives/55854734.html">ISUCON11 &#x4E88;&#x9078;&#x30EC;&#x30AE;&#x30E5;&#x30EC;&#x30FC;&#x30B7;&#x30E7;&#x30F3; : ISUCON&#x516C;&#x5F0F;Blog</a></p>
+
+<p>Swiftの実装は残念ながら提供されていませんが、せっかく参加するのであればチームの得意分野を活かしたい、ということで競技時間内にSwiftで再実装する事になりました。</p>
+
+<h2>採用技術</h2>
+
+<h3>ツールチェイン</h3>
+
+<p>通常、iOSやmacOS向けのSwiftアプリを開発する場合、デプロイ先のOSバージョンに同梱されているSwiftランタイムバージョンによって使えるSwiftの言語バージョンが制限されてしまいます。</p>
+
+<p>が、今回はLinuxにデプロイするSwiftアプリを開発するため、特に制約はありません。最新の言語機能も使い放題です。</p>
+
+<p>というわけで、Swiftツールチェインとして正式リリース前のSwift 5.5を採用しました。Swift 5.5には<a href="https://docs.swift.org/swift-book/LanguageGuide/Concurrency.html">並行プログラミングの言語機能が追加されており</a>、Non-blocking IOを使ったアプリを書くのにもってこいです。</p>
+
+<p>今回はswift-5.5-DEVELOPMENT-SNAPSHOT-2021-07-30-aを使いました。</p>
+
+<h3>Webフレームワーク</h3>
+
+<p>現在アクティブにメンテナンスされているSwift製Webフレームワークはかなり少なくなっており、ほぼVapor一択な状況でした。
+かなり重厚な作りになっていますが、必要な機能は一通り揃っています。</p>
+
+<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fvapor%2Fvapor" title="GitHub - vapor/vapor: 💧 A server-side Swift web framework." class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/vapor/vapor">github.com</a></cite></p>
+
+<p>Vaporが依存しているNon-blocking IOを実現するライブラリSwiftNIOは、言語側のConcurrency機能との橋渡しをサポートしており、SwiftNIO内のFuture型を簡単にasyncメソッド呼び出しとして取り出すことができます。</p>
+
+<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fapple%2Fswift-nio%2Fblob%2F2.32.1%2FSources%2F_NIOConcurrency%2FAsyncAwaitSupport.swift" title="swift-nio/AsyncAwaitSupport.swift at 2.32.1 · apple/swift-nio" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/apple/swift-nio/blob/2.32.1/Sources/_NIOConcurrency/AsyncAwaitSupport.swift">github.com</a></cite></p>
+
+<p>また、VaporはSwiftNIOのConcurrencyサポートを利用して、Vapor自体のConcurrency APIサポートを進めており、 メインメンテナの@0xTimさんのPR上で開発が進行している状況です。今回はこのPRブランチを使用しました。</p>
+
+<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fvapor%2Fvapor%2Fpull%2F2613" title="Add support for async/await by 0xTim · Pull Request #2613 · vapor/vapor" class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/vapor/vapor/pull/2613">github.com</a></cite></p>
+
+<h3>SQLライブラリ</h3>
+
+<p>Vaporは複数のSQLバックエンドをサポートするための抽象レイヤとして<a href="https://github.com/vapor/fluent">Fluent</a> というORMを提供しています。しかし過去の経験から、抽象化されたDSLで思い通りのSQLを発行するのが非常に難しいことが分かっていたため、今回は採用を見送りました。</p>
+
+<p>代わりに、バックエンドをMySQLのみに絞ったMySQLKitを採用しました。(FluentでMySQLバックエンドを使う場合もこれが使われる）</p>
+
+<p>MySQLKitはlibmysqlclientに依存せず、SwiftNIOベースの非同期IOで実装された<a href="https://github.com/vapor/mysql-nio">MySQLNIO</a>をMySQLクライアントとして使っています。ちょっとうれしいですね。</p>
+
+<p>MySQLKitは高度な機能は提供しませんが、行をSwiftの構造体にマップするできるので今回の用途では十分でした。</p>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">struct</span> <span class="synType">Response</span><span class="synSpecial">:</span> <span class="synType">Decodable</span> {
+  <span class="synPreProc">var</span> <span class="synIdentifier">character</span><span class="synSpecial">:</span> <span class="synType">String</span>
+}
+<span class="synPreProc">let</span> <span class="synIdentifier">characters</span> <span class="synIdentifier">=</span> try await pools.withConnection { conn <span class="synStatement">in</span>
+  try await conn.sql()
+    .raw(<span class="synConstant">&quot;SELECT `character` FROM `isu` GROUP BY `character`&quot;</span>)
+    .all(decoding<span class="synSpecial">:</span> <span class="synType">Row.self</span>).<span class="synStatement">get</span>()
+}
+</pre>
+
+
+<p><iframe src="https://hatenablog-parts.com/embed?url=https%3A%2F%2Fgithub.com%2Fvapor%2Fmysql-kit" title="GitHub - vapor/mysql-kit: 🐬 Pure Swift MySQL client built on non-blocking, event-driven sockets." class="embed-card embed-webcard" scrolling="no" frameborder="0" style="display: block; width: 100%; height: 155px; max-width: 500px; margin: 10px 0px;"></iframe><cite class="hatena-citation"><a href="https://github.com/vapor/mysql-kit">github.com</a></cite></p>
+
+<h3>最終的なPackage.swift</h3>
+
+<p>SwiftNIOがConcurrency APIにOSバージョンベースのavailabilityを付けちゃってるので、macOS 12未満のmacOS上で開発するために <code>disable-availability-checking</code> を付けているのがミソ</p>
+
+<p><details></p>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synComment">// swift-tools-version:5.3</span>
+<span class="synPreProc">import</span> PackageDescription
+
+<span class="synPreProc">let</span> <span class="synIdentifier">package</span> <span class="synIdentifier">=</span> Package(
+    name<span class="synSpecial">:</span> <span class="synConstant">&quot;isucon11&quot;</span>,
+    platforms<span class="synSpecial">:</span> <span class="synPreProc">[</span>
+<span class="synPreProc">       .macOS(.v10_15)</span>
+<span class="synPreProc">    ]</span>,
+    dependencies<span class="synSpecial">:</span> <span class="synPreProc">[</span>
+<span class="synPreProc">        .package(url: &quot;https://github.com/vapor/vapor.git&quot;, .branch(&quot;async-await&quot;)),</span>
+<span class="synPreProc">        .package(url: &quot;https://github.com/vapor/mysql-kit.git&quot;, from: &quot;4.0.0&quot;),</span>
+<span class="synPreProc">        .package(url: &quot;https://github.com/Flight-School/AnyCodable&quot;, from: &quot;0.6.0&quot;),</span>
+<span class="synPreProc">        .package(url: &quot;https://github.com/vapor/jwt-kit.git&quot;, from: &quot;4.0.0&quot;),</span>
+<span class="synPreProc">    ]</span>,
+    targets<span class="synSpecial">:</span> <span class="synPreProc">[</span>
+<span class="synPreProc">        .target(</span>
+<span class="synPreProc">            name: &quot;App&quot;,</span>
+<span class="synPreProc">            dependencies: [</span>
+<span class="synPreProc">                .product(name: &quot;Vapor&quot;, package: &quot;vapor&quot;),</span>
+<span class="synPreProc">                .product(name: &quot;MySQLKit&quot;, package: &quot;mysql-kit&quot;),</span>
+<span class="synPreProc">                .product(name: &quot;JWTKit&quot;, package: &quot;jwt-kit&quot;),</span>
+<span class="synPreProc">                .product(name: &quot;AnyCodable&quot;, package: &quot;AnyCodable&quot;)</span>
+<span class="synPreProc">            ]</span>,
+            swiftSettings<span class="synSpecial">:</span> <span class="synPreProc">[</span>
+<span class="synPreProc">                .unsafeFlags([&quot;-cross-module-optimization&quot;]</span>, .when(configuration<span class="synSpecial">:</span> .release)),
+                <span class="synComment">// Disable availability checking to use concurrency API on macOS for development purpose</span>
+                <span class="synComment">// SwiftNIO exposes concurrency API with availability for deployment environment,</span>
+                <span class="synComment">// but in our use case, the deployment target is Linux, and we only use macOS while development,</span>
+                <span class="synComment">// so it's always safe to disable the checking in this situation.</span>
+                .unsafeFlags([<span class="synConstant">&quot;-Xfrontend&quot;</span>, <span class="synConstant">&quot;-disable-availability-checking&quot;</span>])
+            ]
+        ),
+        .target(name<span class="synSpecial">:</span> <span class="synConstant">&quot;Run&quot;</span>, dependencies<span class="synSpecial">:</span> <span class="synPreProc">[.target(name: &quot;App&quot;)]</span>)
+    ]
+)
+</pre>
+
+
+<p></details></p>
+
+<h2>過去問を解く</h2>
+
+<p>過去問としてISUCON 10の予選問題を解きました。素振りによってVaporやMySQLKitに慣れたり、Vaporのデフォルト設定の罠が把握できたのでかなり良かったです。</p>
+
+<p>ただ、もう1年分くらい解いておけば本番でハマった問題も回避できたかなぁという気持ちです。過去問をやろう。</p>
+
+<p>3人で13時間くらい使って移植した結果、他言語の初期実装と同程度のスコアを出すことには成功していました。</p>
+
+<h2>本番結果</h2>
+
+<p>練習の成果やasync/awaitの開発体験の良さもあり、4時間程度でおおよその実装が完了していましたが、その後のベンチマーカ互換性チェックのデバッグに手間取り、最終的にチェックを通過することができずスコアは0でした。</p>
+
+<p>主なハマりポイントはDB内でのタイムゾーンの扱いでした。 MySQLNIOはDATETIME型のマッピングの際のタイムゾーン考慮はユーザの責務であるとし、ライブラリ内では常にGMTとして扱うため、9時間のズレにかなり悩まされました。</p>
+
+<p>時間はむずかしい。</p>
+
+<h2>感想</h2>
+
+<p>かなり楽しかった。</p>
+
+<ul>
+<li>愛と気合で移植できる</li>
+<li>癖を把握する必要はあるがSwiftでもイケる</li>
+<li>他の言語実装を動かしながら、一部のリクエストだけSwift実装に流す、みたなことができていればスコア0は回避できたかも。</li>
+<li>来年再挑戦したい</li>
+</ul>

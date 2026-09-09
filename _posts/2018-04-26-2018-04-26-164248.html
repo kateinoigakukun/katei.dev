@@ -1,0 +1,33 @@
+---
+layout: post
+title: "Enumの生成を制限する"
+date: 2018-04-26 16:42:48 +0900
+language: ja
+source_url: https://kateinoigakukun.hatenablog.com/entry/2018/04/26/164248
+permalink: /blog/2018/04/26/164248/
+---
+
+<p>Discordで話題に上がってたやつ。遊んでたら見つけた。</p>
+
+<blockquote><p>tarunon - 2018/04/26 午後4時2分</p>
+
+<p>Enumを生成勝手に出来ないようにする方法って無いですよね
+structはinitをpublicにしなければ勝手に生成出来ないけど</p></blockquote>
+
+<p>protocol extensionで同名のstatic funcを生やすとambiguousで<code>A.hoge</code>の呼び出しができなくなる。</p>
+
+<pre class="code lang-swift" data-lang="swift" data-unlink><span class="synPreProc">enum</span> <span class="synType">A</span> {
+    <span class="synStatement">case</span> hoge(String)
+}
+
+<span class="synPreProc">protocol</span> <span class="synType">AP</span> {}
+<span class="synPreProc">extension</span> <span class="synType">AP</span> <span class="synStatement">where</span> <span class="synIdentifier">Self</span> <span class="synIdentifier">==</span> A {
+    <span class="synPreProc">static</span> <span class="synPreProc">var</span> <span class="synIdentifier">hoge</span><span class="synSpecial">:</span> (String) <span class="synSpecial">-&gt;</span> <span class="synType">Self</span> {
+        fatalError()
+    }
+}
+
+<span class="synPreProc">extension</span> <span class="synType">A</span><span class="synSpecial">:</span> <span class="synType">AP</span> {}
+
+A.hoge(<span class="synConstant">&quot;aa&quot;</span>) <span class="synComment">// error: ambiguous use of 'hoge'</span>
+</pre>
