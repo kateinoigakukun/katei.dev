@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 332" width="700" height="332" role="img" aria-labelledby="t-ryzen d-ryzen" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+<title id="t-ryzen">CoreMark on Ryzen 9 5900HX</title>
+<desc id="d-ryzen">Horizontal bar chart of CoreMark scores on Ryzen 9 5900HX, higher is better. WasmKit 0.4.0 2854; wasmi v2 2538; WAMR (fast interp) 1992; WasmKit 0.3.1 1857; Stitch 1855; Wasmtime Pulley 1631; wasmi v1 1430.</desc>
+<text x="0" y="20" font-size="14.5" font-weight="600" fill="#0b0b0b">Ryzen 9 5900HX</text>
+<text x="0" y="38" font-size="12.5" fill="#52514e">CoreMark score, higher is better</text>
+<line x1="172.0" y1="52" x2="172.0" y2="290" stroke="#d7d7d7" stroke-width="1"/>
+<text x="172.0" y="310" font-size="12" fill="#52514e" text-anchor="middle">0</text>
+<line x1="249.3" y1="52" x2="249.3" y2="290" stroke="#d7d7d7" stroke-width="1"/>
+<text x="249.3" y="310" font-size="12" fill="#52514e" text-anchor="middle">500</text>
+<line x1="326.7" y1="52" x2="326.7" y2="290" stroke="#d7d7d7" stroke-width="1"/>
+<text x="326.7" y="310" font-size="12" fill="#52514e" text-anchor="middle">1,000</text>
+<line x1="404.0" y1="52" x2="404.0" y2="290" stroke="#d7d7d7" stroke-width="1"/>
+<text x="404.0" y="310" font-size="12" fill="#52514e" text-anchor="middle">1,500</text>
+<line x1="481.3" y1="52" x2="481.3" y2="290" stroke="#d7d7d7" stroke-width="1"/>
+<text x="481.3" y="310" font-size="12" fill="#52514e" text-anchor="middle">2,000</text>
+<line x1="558.7" y1="52" x2="558.7" y2="290" stroke="#d7d7d7" stroke-width="1"/>
+<text x="558.7" y="310" font-size="12" fill="#52514e" text-anchor="middle">2,500</text>
+<line x1="636.0" y1="52" x2="636.0" y2="290" stroke="#d7d7d7" stroke-width="1"/>
+<text x="636.0" y="310" font-size="12" fill="#52514e" text-anchor="middle">3,000</text>
+<text x="160" y="73.5" font-size="13" fill="#0b0b0b" font-weight="600" text-anchor="end">WasmKit 0.4.0</text>
+<rect x="172" y="59.0" width="441.4" height="20" fill="#2a78d6"><title>WasmKit 0.4.0 · 2854</title></rect>
+<text x="620.4" y="73.5" font-size="12.5" fill="#0b0b0b" font-weight="600">2,854</text>
+<text x="160" y="107.5" font-size="13" fill="#0b0b0b" text-anchor="end">wasmi v2</text>
+<rect x="172" y="93.0" width="392.5" height="20" fill="#8a8984"><title>wasmi v2 · 2538</title></rect>
+<text x="571.5" y="107.5" font-size="12.5" fill="#0b0b0b">2,538</text>
+<text x="160" y="141.5" font-size="13" fill="#0b0b0b" text-anchor="end">WAMR (fast interp)</text>
+<rect x="172" y="127.0" width="308.1" height="20" fill="#8a8984"><title>WAMR (fast interp) · 1992</title></rect>
+<text x="487.1" y="141.5" font-size="12.5" fill="#0b0b0b">1,992</text>
+<text x="160" y="175.5" font-size="13" fill="#0b0b0b" text-anchor="end">WasmKit 0.3.1</text>
+<rect x="172" y="161.0" width="287.2" height="20" fill="#9ec5f4"><title>WasmKit 0.3.1 · 1857</title></rect>
+<text x="466.2" y="175.5" font-size="12.5" fill="#0b0b0b">1,857</text>
+<text x="160" y="209.5" font-size="13" fill="#0b0b0b" text-anchor="end">Stitch</text>
+<rect x="172" y="195.0" width="286.9" height="20" fill="#8a8984"><title>Stitch · 1855</title></rect>
+<text x="465.9" y="209.5" font-size="12.5" fill="#0b0b0b">1,855</text>
+<text x="160" y="243.5" font-size="13" fill="#0b0b0b" text-anchor="end">Wasmtime Pulley</text>
+<rect x="172" y="229.0" width="252.3" height="20" fill="#8a8984"><title>Wasmtime Pulley · 1631</title></rect>
+<text x="431.3" y="243.5" font-size="12.5" fill="#0b0b0b">1,631</text>
+<text x="160" y="277.5" font-size="13" fill="#0b0b0b" text-anchor="end">wasmi v1</text>
+<rect x="172" y="263.0" width="221.2" height="20" fill="#8a8984"><title>wasmi v1 · 1430</title></rect>
+<text x="400.2" y="277.5" font-size="12.5" fill="#0b0b0b">1,430</text>
+<line x1="172" y1="52" x2="172" y2="290" stroke="#52514e" stroke-width="1"/>
+</svg>

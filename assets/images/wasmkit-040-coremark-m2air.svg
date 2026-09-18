@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 400" width="700" height="400" role="img" aria-labelledby="t-m2air d-m2air" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+<title id="t-m2air">CoreMark on M2 Air</title>
+<desc id="d-m2air">Horizontal bar chart of CoreMark scores on M2 Air, higher is better. WasmKit 0.4.0 4249; wasmi v2 4193; Stitch 2980; Wasm3 (eager) 2799; WasmKit 0.3.1 2643; WAMR (fast interp) 2233; wasmi v1 1927; Wasmtime Pulley 1378; JavaScriptCore (IPInt) 1314.</desc>
+<text x="0" y="20" font-size="14.5" font-weight="600" fill="#0b0b0b">M2 Air</text>
+<text x="0" y="38" font-size="12.5" fill="#52514e">CoreMark score, higher is better</text>
+<line x1="172.0" y1="52" x2="172.0" y2="358" stroke="#d7d7d7" stroke-width="1"/>
+<text x="172.0" y="378" font-size="12" fill="#52514e" text-anchor="middle">0</text>
+<line x1="264.8" y1="52" x2="264.8" y2="358" stroke="#d7d7d7" stroke-width="1"/>
+<text x="264.8" y="378" font-size="12" fill="#52514e" text-anchor="middle">1,000</text>
+<line x1="357.6" y1="52" x2="357.6" y2="358" stroke="#d7d7d7" stroke-width="1"/>
+<text x="357.6" y="378" font-size="12" fill="#52514e" text-anchor="middle">2,000</text>
+<line x1="450.4" y1="52" x2="450.4" y2="358" stroke="#d7d7d7" stroke-width="1"/>
+<text x="450.4" y="378" font-size="12" fill="#52514e" text-anchor="middle">3,000</text>
+<line x1="543.2" y1="52" x2="543.2" y2="358" stroke="#d7d7d7" stroke-width="1"/>
+<text x="543.2" y="378" font-size="12" fill="#52514e" text-anchor="middle">4,000</text>
+<line x1="636.0" y1="52" x2="636.0" y2="358" stroke="#d7d7d7" stroke-width="1"/>
+<text x="636.0" y="378" font-size="12" fill="#52514e" text-anchor="middle">5,000</text>
+<text x="160" y="73.5" font-size="13" fill="#0b0b0b" font-weight="600" text-anchor="end">WasmKit 0.4.0</text>
+<rect x="172" y="59.0" width="394.3" height="20" fill="#2a78d6"><title>WasmKit 0.4.0 · 4249</title></rect>
+<text x="573.3" y="73.5" font-size="12.5" fill="#0b0b0b" font-weight="600">4,249</text>
+<text x="160" y="107.5" font-size="13" fill="#0b0b0b" text-anchor="end">wasmi v2</text>
+<rect x="172" y="93.0" width="389.1" height="20" fill="#8a8984"><title>wasmi v2 · 4193</title></rect>
+<text x="568.1" y="107.5" font-size="12.5" fill="#0b0b0b">4,193</text>
+<text x="160" y="141.5" font-size="13" fill="#0b0b0b" text-anchor="end">Stitch</text>
+<rect x="172" y="127.0" width="276.5" height="20" fill="#8a8984"><title>Stitch · 2980</title></rect>
+<text x="455.5" y="141.5" font-size="12.5" fill="#0b0b0b">2,980</text>
+<text x="160" y="175.5" font-size="13" fill="#0b0b0b" text-anchor="end">Wasm3 (eager)</text>
+<rect x="172" y="161.0" width="259.7" height="20" fill="#8a8984"><title>Wasm3 (eager) · 2799</title></rect>
+<text x="438.7" y="175.5" font-size="12.5" fill="#0b0b0b">2,799</text>
+<text x="160" y="209.5" font-size="13" fill="#0b0b0b" text-anchor="end">WasmKit 0.3.1</text>
+<rect x="172" y="195.0" width="245.3" height="20" fill="#9ec5f4"><title>WasmKit 0.3.1 · 2643</title></rect>
+<text x="424.3" y="209.5" font-size="12.5" fill="#0b0b0b">2,643</text>
+<text x="160" y="243.5" font-size="13" fill="#0b0b0b" text-anchor="end">WAMR (fast interp)</text>
+<rect x="172" y="229.0" width="207.2" height="20" fill="#8a8984"><title>WAMR (fast interp) · 2233</title></rect>
+<text x="386.2" y="243.5" font-size="12.5" fill="#0b0b0b">2,233</text>
+<text x="160" y="277.5" font-size="13" fill="#0b0b0b" text-anchor="end">wasmi v1</text>
+<rect x="172" y="263.0" width="178.8" height="20" fill="#8a8984"><title>wasmi v1 · 1927</title></rect>
+<text x="357.8" y="277.5" font-size="12.5" fill="#0b0b0b">1,927</text>
+<text x="160" y="311.5" font-size="13" fill="#0b0b0b" text-anchor="end">Wasmtime Pulley</text>
+<rect x="172" y="297.0" width="127.9" height="20" fill="#8a8984"><title>Wasmtime Pulley · 1378</title></rect>
+<text x="306.9" y="311.5" font-size="12.5" fill="#0b0b0b">1,378</text>
+<text x="160" y="345.5" font-size="13" fill="#0b0b0b" text-anchor="end">JavaScriptCore (IPInt)</text>
+<rect x="172" y="331.0" width="121.9" height="20" fill="#8a8984"><title>JavaScriptCore (IPInt) · 1314</title></rect>
+<text x="300.9" y="345.5" font-size="12.5" fill="#0b0b0b">1,314</text>
+<line x1="172" y1="52" x2="172" y2="358" stroke="#52514e" stroke-width="1"/>
+</svg>
